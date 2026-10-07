@@ -1,0 +1,104 @@
+// Copy next to report-loader.ts in the configured Vitest suite.
+import { describe, expect, it, vi } from 'vitest'
+import { createReportLoader, RunView } from './report-loader'
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no })
+  return { promise, resolve, reject }
+}
+
+function run(id: string): RunView {
+  return {
+    run_id: id,
+    head_sha: 'a'.repeat(40),
+    run_status: 'COMPLETED',
+    coverage: { status: 'complete', limitations: [] },
+    publication: { status: 'PUBLISHED', error_code: null },
+    findings: [{ finding_id: 'finding-1', rule_id: 'rule-1', lifecycle_status: 'PERSISTING' }],
+  }
+}
+
+describe('run view boundary and request ordering', () => {
+  it('rejects unknown run states and malformed snapshots', () => {
+    expect(RunView.safeParse({ ...run('A'), run_status: 'partial' }).success).toBe(false)
+    expect(RunView.safeParse({ ...run('A'), head_sha: 'latest' }).success).toBe(false)
+  })
+  it.each(['NEW', 'QUEUED', 'RUNNING', 'CANCELLED', 'FAILED'] as const)(
+    'keeps %s separate from analysis coverage', async (status) => {
+      const show = vi.fn(), error = vi.fn()
+      const view = { ...run('A'), run_status: status, coverage: null, findings: [],
+        publication: { status: 'NOT_REQUESTED', error_code: null } }
+      await createReportLoader(async () => view, show, error).load('A')
+      expect(show).toHaveBeenCalledWith(view)
+      expect(error).not.toHaveBeenCalled()
+    },
+  )
+  it('preserves completed findings when publication fails', async () => {
+    const show = vi.fn(), error = vi.fn()
+    const view = { ...run('A'), publication: { status: 'FAILED', error_code: 'VCS_TIMEOUT' } }
+    await createReportLoader(async () => view, show, error).load('A')
+    expect(show).toHaveBeenCalledWith(view)
+    expect(show.mock.calls[0][0].findings).toHaveLength(1)
+    expect(error).not.toHaveBeenCalled()
+  })
+  it('preserves partial coverage and server-owned history', () => {
+    const view = { ...run('A'), coverage: { status: 'partial', limitations: ['Caller unavailable'] } }
+    const parsed = RunView.parse(view)
+    expect(parsed.coverage).toEqual(view.coverage)
+    expect(parsed.findings[0].lifecycle_status).toBe('PERSISTING')
+    expect(RunView.parse({ ...view, findings: [] }).findings).toEqual([])
+  })
+  it('rejects a complete report with known limitations', () => {
+    const view = { ...run('A'), coverage: { status: 'complete', limitations: ['Missing file'] } }
+    expect(RunView.safeParse(view).success).toBe(false)
+  })
+  it('keeps B when A finishes later', async () => {
+    const a = deferred<unknown>(), b = deferred<unknown>()
+    const show = vi.fn(), error = vi.fn()
+    const loader = createReportLoader(id => id === 'A' ? a.promise : b.promise, show, error)
+    const first = loader.load('A'), second = loader.load('B')
+    b.resolve(run('B')); await second
+    a.resolve(run('A')); await first
+    expect(show.mock.calls).toEqual([[run('B')]])
+    expect(error).not.toHaveBeenCalled()
+  })
+  it('keeps B error when A succeeds later', async () => {
+    const a = deferred<unknown>(), b = deferred<unknown>()
+    const show = vi.fn(), error = vi.fn()
+    const loader = createReportLoader(id => id === 'A' ? a.promise : b.promise, show, error)
+    const first = loader.load('A'), second = loader.load('B')
+    const unavailable = new Error('B unavailable')
+    b.reject(unavailable); await second
+    a.resolve(run('A')); await first
+    expect(show).not.toHaveBeenCalled()
+    expect(error).toHaveBeenCalledExactlyOnceWith(unavailable)
+  })
+  it('ignores a late error from A after B succeeds', async () => {
+    const a = deferred<unknown>(), b = deferred<unknown>()
+    const show = vi.fn(), error = vi.fn()
+    const loader = createReportLoader(id => id === 'A' ? a.promise : b.promise, show, error)
+    const first = loader.load('A'), second = loader.load('B')
+    b.resolve(run('B')); await second
+    a.reject(new Error('A unavailable')); await first
+    expect(show.mock.calls).toEqual([[run('B')]])
+    expect(error).not.toHaveBeenCalled()
+  })
+  it.each(['success', 'failure'])('ignores %s after cleanup', async (outcome) => {
+    const response = deferred<unknown>(), show = vi.fn(), error = vi.fn()
+    const loader = createReportLoader(() => response.promise, show, error)
+    const pending = loader.load('A'); loader.cancel()
+    if (outcome === 'success') response.resolve(run('A'))
+    else response.reject(new Error('Cancelled transport'))
+    await pending
+    expect(show).not.toHaveBeenCalled()
+    expect(error).not.toHaveBeenCalled()
+  })
+  it('rejects a different run returned by the server', async () => {
+    const show = vi.fn(), error = vi.fn()
+    await createReportLoader(async () => run('B'), show, error).load('A')
+    expect(show).not.toHaveBeenCalled()
+    expect(error).toHaveBeenCalledOnce()
+  })
+})

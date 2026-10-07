@@ -1,8 +1,8 @@
-# DMC-268 UI (Team 3)
+# DMC-268 UI (команда 3)
 
-Vite + React + TypeScript frontend for DMC-268 Team 3.
+Frontend команды 3 на Vite, React и TypeScript.
 
-## Setup & Run
+## Установка и запуск
 
 Requires Node 24 (`.nvmrc`) and pnpm 12 (`npm install -g pnpm@12.9.1`, or `corepack enable`).
 
@@ -10,6 +10,8 @@ Requires Node 24 (`.nvmrc`) and pnpm 12 (`npm install -g pnpm@12.9.1`, or `corep
 pnpm install      # also installs the Husky git hooks
 pnpm dev
 ```
+
+Правила, скиллы и шаблоны разработки команды: [.agents/README.md](.agents/README.md).
 
 ## Quality checks
 

@@ -1,0 +1,53 @@
+// Local view-contract example, not the approved API DTO or LLM candidate schema.
+// Replace RunView and publication field names with the owning API contract.
+import { z } from 'zod'
+
+const Coverage = z.object({
+  status: z.enum(['complete', 'partial', 'failed']),
+  limitations: z.array(z.string().trim().min(1)),
+}).strict().superRefine((value, context) => {
+  const valid = value.status === 'complete'
+    ? value.limitations.length === 0
+    : value.limitations.length > 0
+  if (!valid) context.addIssue({ code: 'custom', message: 'Inconsistent coverage' })
+})
+
+export const RunView = z.object({
+  run_id: z.string().min(1),
+  head_sha: z.string().regex(/^[0-9a-f]{40}$/),
+  run_status: z.enum(['NEW', 'QUEUED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
+  coverage: Coverage.nullable(),
+  // Example publication vocabulary; only its separation is prescribed here.
+  publication: z.object({
+    status: z.enum(['NOT_REQUESTED', 'PENDING', 'PUBLISHED', 'FAILED']),
+    error_code: z.string().min(1).nullable(),
+  }).strict(),
+  findings: z.array(z.object({
+    finding_id: z.string().min(1),
+    rule_id: z.string().min(1),
+    lifecycle_status: z.enum(['NEW', 'PERSISTING', 'FIXED']),
+  }).strict()),
+}).strict()
+export type RunView = z.infer<typeof RunView>
+
+export function createReportLoader(
+  fetchRun: (id: string) => Promise<unknown>,
+  show: (run: RunView) => void,
+  showError: (error: unknown) => void,
+) {
+  let generation = 0
+  return {
+    async load(id: string) {
+      const request = ++generation
+      try {
+        const run = RunView.parse(await fetchRun(id))
+        if (run.run_id !== id) throw new Error('Unexpected run_id')
+        if (request === generation) show(run)
+      } catch (error) {
+        if (request === generation) showError(error)
+      }
+    },
+    // React cleanup must also abort the actual transport when supported.
+    cancel() { generation += 1 },
+  }
+}

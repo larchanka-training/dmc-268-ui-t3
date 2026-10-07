@@ -7,9 +7,17 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router'
 import { NotFoundPage } from '@/pages/not-found'
+import { RepositoriesPage } from '@/pages/repositories'
 import { ReviewRunsPage } from '@/pages/review-runs'
 import { CALLBACK_PATH, type ConfigResult } from '@/shared/config/env'
-import { AppLayout, CallbackRoute, RootLayout, RunRoute, SettingsRoute } from './ui/routes'
+import {
+  AppLayout,
+  CallbackRoute,
+  ConnectRepositoryRoute,
+  RootLayout,
+  RunRoute,
+  SettingsRoute,
+} from './ui/routes'
 import type { ReviewApiFactory } from './ui/SessionGate'
 
 export interface RouterContext {
@@ -23,7 +31,8 @@ export interface RouterContext {
  *   __root__                 document title
  *   ├── /auth/callback       public, no shell
  *   └── app (pathless)       session gate + shell
- *       ├── /                redirect: ?run=<id> → /runs/<id>, else /runs
+ *       ├── /                redirect: ?run=<id> → /runs/<id>, else /repositories
+ *       ├── /repositories, /repositories/connect
  *       ├── /runs, /runs/$runId, /settings
  *       └── $                not found
  */
@@ -51,8 +60,22 @@ const indexRoute = createRoute({
     if (search.run) {
       throw redirect({ to: '/runs/$runId', params: { runId: search.run }, replace: true })
     }
-    throw redirect({ to: '/runs', replace: true })
+    throw redirect({ to: '/repositories', replace: true })
   },
+})
+
+const repositoriesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/repositories',
+  staticData: { title: 'Repositories' },
+  component: RepositoriesPage,
+})
+
+const connectRepositoryRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/repositories/connect',
+  staticData: { title: 'Connect repository' },
+  component: ConnectRepositoryRoute,
 })
 
 const runsRoute = createRoute({
@@ -86,7 +109,15 @@ const notFoundRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   callbackRoute,
-  appRoute.addChildren([indexRoute, runsRoute, runRoute, settingsRoute, notFoundRoute]),
+  appRoute.addChildren([
+    indexRoute,
+    repositoriesRoute,
+    connectRepositoryRoute,
+    runsRoute,
+    runRoute,
+    settingsRoute,
+    notFoundRoute,
+  ]),
 ])
 
 export function createAppRouter({

@@ -1,6 +1,6 @@
 # Frontend architecture
 
-The UI of the AI code-review bot: it shows a review run, the reviewed diff, and the AI findings next to the lines they refer to. This document describes the layer structure, the state management, routes and the app shell, GitHub sign-in, theming, the UI stack, and the base diff components. It ends with a mock of the full application state for one review run.
+The UI of the AI code-review bot: it lists and connects repositories, shows a review run, the reviewed diff, and the AI findings next to the lines they refer to. This document describes the layer structure, the state management, routes and the app shell, GitHub sign-in, theming, the UI stack, and the base diff components. It ends with a mock of the full application state for one review run.
 
 Stack: React 18, TypeScript (strict), Vite, TanStack Router, TanStack Query, Zustand, Zod, Tailwind CSS v4, shadcn/ui (Radix), Shiki, Vitest + Testing Library.
 
@@ -9,10 +9,10 @@ Stack: React 18, TypeScript (strict), Vite, TanStack Router, TanStack Query, Zus
 ```mermaid
 flowchart TD
   app["app<br/>providers, route tree, session gate, global styles, entry"] --> pages
-  pages["pages<br/>review-runs, review-run, settings,<br/>not-found, sign-in, auth-callback"] --> widgets
+  pages["pages<br/>repositories, connect-repository, review-runs,<br/>review-run, settings, not-found, sign-in, auth-callback"] --> widgets
   widgets["widgets<br/>app-shell, diff-viewer, review-summary"] --> features
-  features["features<br/>toggle-diff-view, expand-context, reply-to-finding,<br/>resolve-finding, auth-by-github, switch-theme"] --> entities
-  entities["entities<br/>review-run, diff, finding, session"] --> shared
+  features["features<br/>toggle-diff-view, expand-context, reply-to-finding,<br/>resolve-finding, auth-by-github, switch-theme, connect-repository"] --> entities
+  entities["entities<br/>repository, review-run, diff, finding, session"] --> shared
   shared["shared<br/>api, lib, ui, config"]
 ```
 
@@ -24,14 +24,14 @@ app ──► pages ──► widgets ──► features ──► entities ─�
  └────────┴──────────┴───────────┴────────────┴──► (any lower layer is allowed too)
 ```
 
-| Layer      | Slices                                                                                                        | Responsibility                                                                                           |
-| ---------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `app`      | –                                                                                                             | Entry point, `QueryClient`, API adapter selection, route tree, session gate, theme tokens                |
-| `pages`    | `review-runs`, `review-run`, `settings`, `not-found`, `sign-in`, `auth-callback`                              | Screens: the run list, a run with its loading / error / empty / partial states, settings, sign-in, OAuth |
-| `widgets`  | `app-shell`, `diff-viewer`, `review-summary`                                                                  | Self-contained blocks that combine entities and features; `app-shell` is the signed-in frame             |
-| `features` | `toggle-diff-view`, `expand-context`, `reply-to-finding`, `resolve-finding`, `auth-by-github`, `switch-theme` | One user action each: UI control + mutation or store update                                              |
-| `entities` | `review-run`, `diff`, `finding`, `session`                                                                    | Domain model: Zod schemas, query hooks, stores, pure logic, presentational atoms                         |
-| `shared`   | segments `api`, `lib`, `ui`, `config`                                                                         | Domain-free code: API boundaries, mock adapters, env config, PKCE, theme store, highlighter, shadcn      |
+| Layer      | Slices                                                                                                                              | Responsibility                                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app`      | –                                                                                                                                   | Entry point, `QueryClient`, API adapter selection, route tree, session gate, theme tokens                                                        |
+| `pages`    | `repositories`, `connect-repository`, `review-runs`, `review-run`, `settings`, `not-found`, `sign-in`, `auth-callback`              | Screens: connected repositories, connecting one, the run list, a run with its loading / error / empty / partial states, settings, sign-in, OAuth |
+| `widgets`  | `app-shell`, `diff-viewer`, `review-summary`                                                                                        | Self-contained blocks that combine entities and features; `app-shell` is the signed-in frame                                                     |
+| `features` | `toggle-diff-view`, `expand-context`, `reply-to-finding`, `resolve-finding`, `auth-by-github`, `switch-theme`, `connect-repository` | One user action each: UI control + mutation or store update                                                                                      |
+| `entities` | `repository`, `review-run`, `diff`, `finding`, `session`                                                                            | Domain model: Zod schemas, query hooks, stores, pure logic, presentational atoms                                                                 |
+| `shared`   | segments `api`, `lib`, `ui`, `config`                                                                                               | Domain-free code: API boundaries, mock adapters, env config, PKCE, theme store, highlighter, shadcn                                              |
 
 Inside a slice, code is grouped into segments: `ui/`, `model/` (types, stores, schemas), `api/` (query hooks), and `lib/` (pure helpers).
 
@@ -59,27 +59,27 @@ ReviewApi adapter ──► Zod schema (.parse + snake→camel transform) ──
 Zustand stores (entities/*/model/*-store.ts) ◄── features (actions) ──► widgets (selector hooks)
 ```
 
-| Kind of state    | Where                                 | Examples                                                                                                                    |
-| ---------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Server state     | TanStack Query                        | `['runs']` (list), `['run', runId]`, `['run', runId, 'diff']`, `['run', runId, 'findings']`, `['run', runId, 'file', path]` |
-| URL state        | TanStack Router                       | the current page and `runId` (`/runs/$runId`)                                                                               |
-| Shared client UI | Zustand, read through selector hooks  | `diffViewStore`: view mode, per-file collapse, gap expansions. `findingNavStore`: selected finding, flashed line            |
-| Session          | Zustand (`sessionStore`), memory only | status (`restoring` / `signed-out` / `signed-in`), access token, expiry, GitHub user, sign-out reason                       |
-| Preferences      | Zustand + `localStorage`              | `themeStore` (`dmc268.theme`), `sidebarStore` (`dmc268.sidebar`); never credentials                                         |
-| Local UI         | `useState`                            | reply draft, whether a finding card is expanded                                                                             |
+| Kind of state    | Where                                 | Examples                                                                                                                                                                                      |
+| ---------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server state     | TanStack Query                        | `['runs']` (list), `['run', runId]`, `['run', runId, 'diff']`, `['run', runId, 'findings']`, `['run', runId, 'file', path]`; `['repositories', 'connected']`, `['repositories', 'available']` |
+| URL state        | TanStack Router                       | the current page and `runId` (`/runs/$runId`)                                                                                                                                                 |
+| Shared client UI | Zustand, read through selector hooks  | `diffViewStore`: view mode, per-file collapse, gap expansions. `findingNavStore`: selected finding, flashed line                                                                              |
+| Session          | Zustand (`sessionStore`), memory only | status (`restoring` / `signed-out` / `signed-in`), access token, expiry, GitHub user, sign-out reason                                                                                         |
+| Preferences      | Zustand + `localStorage`              | `themeStore` (`dmc268.theme`), `sidebarStore` (`dmc268.sidebar`); never credentials                                                                                                           |
+| Local UI         | `useState`                            | reply draft, whether a finding card is expanded                                                                                                                                               |
 
 Rules:
 
 - **Validate at the boundary.** `ReviewApi` methods return `unknown`. Every query hook parses the result with the entity's Zod schema. Invalid data puts the query into the error state, and nothing partial is rendered. The schemas also map the snake_case wire format to camelCase view models, so a backend DTO change only touches the schemas.
 - **Key by run.** All query keys start with `['run', runId]`, so a slow response for an old run can never show up under a new one. `queryFn` passes the `AbortSignal` to the adapter.
 - **Keep run lifecycle, coverage, and publication separate.** `status` (NEW … CANCELLED), `coverage.status` (complete/partial/failed), and `publication.status` are independent fields, each with its own badge. A run with partial or failed coverage is never shown as "no issues".
-- **Mutations.** Resolving a finding is optimistic and rolls back on error (`onMutate` snapshot → `onError` restore → `onSettled` invalidate). A reply is not optimistic: it joins the thread only after the server accepts it, and on failure the draft stays in the input.
+- **Mutations.** Resolving a finding is optimistic and rolls back on error (`onMutate` snapshot → `onError` restore → `onSettled` invalidate). A reply is not optimistic: it joins the thread only after the server accepts it, and on failure the draft stays in the input. Connecting a repository is not optimistic either: on success (or `409`, already connected) both `['repositories', …]` queries are refetched, including inactive ones, before the page navigates to `/repositories`, so the list never renders without the new entry.
 - **Retries.** Only transient failures are retried, never Zod errors or 4xx responses (`app/providers/query-client.ts`).
 - **Replies and resolution are UI-only in v1.** They are not posted to the pull request. The runtime publisher maintains one PR summary, and inline comments are outside v1.
 
 ### API adapter
 
-`shared/api/review-api.ts` defines the transport interface. `listRuns()` returns the user's runs (the backend endpoint will be `GET /runs`); the other methods read or change one run. The app currently uses `createMockReviewApi()` (`shared/api/mock/`), which serves the mock state below with configurable latency; `listRuns()` returns its single run, so the mock state keeps the shape documented here. For manual testing it has a failure switch: `?mockFail=listRuns,replyToFinding,setFindingStatus`. A real HTTP client will implement the same interface, and components will not change. Tests inject adapters through `renderWithProviders(ui, { api, authApi })` (`shared/lib/test/render.tsx`). Components that use `Link` or route hooks render through `renderWithRouter(ui, { path, routes })` (`shared/lib/test/render-with-router.tsx`); the real route tree is tested end to end in `app/App.test.tsx`.
+`shared/api/review-api.ts` defines the transport interface. `listRuns()` returns the user's runs (the backend endpoint will be `GET /runs`); the run methods read or change one run; `listRepositories()`, `listAvailableRepositories()` and `connectRepository()` serve the repository screens (see [Repository endpoints](#repository-endpoints-proposed)). The app currently uses `createMockReviewApi()` (`shared/api/mock/`), which serves the mock state below with configurable latency; `listRuns()` returns its single run, so the mock state keeps the shape documented here. Repository fixtures live in `shared/api/mock/repositories.mock.ts`, separate from the run state. For manual testing it has a failure switch: `?mockFail=listRuns,replyToFinding,setFindingStatus,listRepositories,listAvailableRepositories,connectRepository`. A real HTTP client will implement the same interface, and components will not change. Tests inject adapters through `renderWithProviders(ui, { api, authApi })` (`shared/lib/test/render.tsx`). Components that use `Link` or route hooks render through `renderWithRouter(ui, { path, routes })` (`shared/lib/test/render-with-router.tsx`); the real route tree is tested end to end in `app/App.test.tsx`.
 
 ## Routes
 
@@ -89,7 +89,9 @@ Navigation uses **TanStack Router** with a route tree written in code in `app/ro
 __root__                     RootLayout: document.title = "<route title> · AI code review"
 ├── /auth/callback           CallbackRoute → AuthCallbackPage (public, no shell)
 └── app (pathless layout)    AppLayout → SessionGate → AppShell + <Outlet/>
-    ├── /                    beforeLoad: ?run=<id> → /runs/<id>, otherwise /runs (replace)
+    ├── /                    beforeLoad: ?run=<id> → /runs/<id>, otherwise /repositories (replace)
+    ├── /repositories        RepositoriesPage        "Repositories"
+    ├── /repositories/connect ConnectRepositoryRoute → ConnectRepositoryPage "Connect repository"
     ├── /runs                ReviewRunsPage          "Review runs"
     ├── /runs/$runId         RunRoute → ReviewRunPage "Review run"
     ├── /settings            SettingsRoute → SettingsPage "Settings"
@@ -105,11 +107,11 @@ __root__                     RootLayout: document.title = "<route title> · AI c
 
 `widgets/app-shell` is the frame around every signed-in page:
 
-| Region  | Landmark            | Contents                                                                                                                                         |
-| ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Sidebar | `navigation` "Main" | "Review runs" (`/runs`), the open run nested under it (titled from the cached run query), "Settings". `aria-current="page"` marks the exact page |
-| Header  | `banner`            | Mobile menu button, route title, "Mock auth" badge in mock mode, `ThemeMenu`, `UserMenu` (avatar + login; name, `@login`, Settings, Sign out)    |
-| Content | `main#main`         | The matched page. A "Skip to content" link is first in the tab order                                                                             |
+| Region  | Landmark            | Contents                                                                                                                                                                                                                      |
+| ------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sidebar | `navigation` "Main" | "Repositories" (`/repositories`, section-highlighted on the connect screen), "Review runs" (`/runs`), the open run nested under it (titled from the cached run query), "Settings". `aria-current="page"` marks the exact page |
+| Header  | `banner`            | Mobile menu button, route title, "Mock auth" badge in mock mode, `ThemeMenu`, `UserMenu` (avatar + login; name, `@login`, Settings, Sign out)                                                                                 |
+| Content | `main#main`         | The matched page. A "Skip to content" link is first in the tab order                                                                                                                                                          |
 
 - **Wide screens (`md` and up):** the sidebar is visible and collapses to an icon rail. The choice persists in `localStorage['dmc268.sidebar']`, and rail items keep an `aria-label` and a tooltip.
 - **Narrow screens:** the sidebar is hidden and the header's menu button opens the same `NavList` in a `Sheet` (a modal drawer). Choosing a destination or pressing Escape closes it, and focus returns to the menu button.
@@ -164,6 +166,20 @@ The endpoints are relative to `VITE_API_BASE_URL`, which must be same-site with 
 
 The refresh cookie should be `HttpOnly; Secure; SameSite=Lax; Path=/api/auth`. The backend should also accept the previous refresh token for a short grace period after rotation, so two tabs that refresh at the same moment do not sign each other out. Other API calls authenticate with `Authorization: Bearer <access_token>`.
 
+### Repository endpoints (proposed)
+
+**Not an approved contract.** The repository screens run on the mock adapter. These shapes follow the system design's `Repository` (provider, external ID, name, URL, default branch) and are a proposal for the backend owner; only `shared/api/types.ts`, the `entities/repository` schemas and the future HTTP adapter depend on them. All requests use `Authorization: Bearer <access_token>`.
+
+| Endpoint                      | Request                     | Success                         | Errors                                                             |
+| ----------------------------- | --------------------------- | ------------------------------- | ------------------------------------------------------------------ |
+| `GET /repositories`           | –                           | `200 RepositoryWire[]`          | `401`                                                              |
+| `GET /repositories/available` | –                           | `200 AvailableRepositoryWire[]` | `401`, `502` provider down                                         |
+| `POST /repositories`          | `{ provider, external_id }` | `201 RepositoryWire`            | `409` already connected, `403`/`404` the reviewer cannot access it |
+
+`RepositoryWire` is `{ repository_id, provider, external_id, full_name, url, default_branch, private, connected_at }`. `AvailableRepositoryWire` has the same repository fields plus `repository_id`, which is `null` until the repository is connected. `provider` is `github` or `gitlab`. `external_id` is a string, because provider IDs differ in kind and may exceed the safe integer range. `url` must be an absolute `https` URL; the UI rejects the whole list otherwise, so no other scheme reaches an `href`. Open questions for the backend: pagination or server-side search of available repositories, and whether connecting needs a `Project`.
+
+`VITE_GITHUB_APP_SLUG` (optional, public) makes the connect screen link to `https://github.com/apps/<slug>/installations/new`, where users give the app access to more repositories.
+
 ## Theming
 
 The user picks **Light**, **Dark**, or **System** (default). The CSS owns the themes: `<html data-theme="light|dark">` forces one, and no attribute means the `prefers-color-scheme` rules apply, which follow OS changes live without any JS.
@@ -189,28 +205,32 @@ The user picks **Light**, **Dark**, or **System** (default). The CSS owns the th
 
 ## Components
 
-| Component                                  | Slice                                  | Purpose                                                                                                                  |
-| ------------------------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `CodeBlock`                                | `shared/ui/code-block`                 | Read-only snippet: line numbers from `startLine`, syntax highlighting, `highlightLines`                                  |
-| `parseUnifiedDiff`                         | `entities/diff`                        | Strict unified/git diff parser: files, hunks, line numbers, renames, binary files; fails as a whole on errors            |
-| `buildUnifiedRows`, `buildSplitRows`       | `entities/diff`                        | Pure row models for both layouts, including collapsed gaps and revealed context lines                                    |
-| `expansionsForAnchors`, `placeOn*Rows`     | `entities/diff`                        | Reveal anchored lines hidden in gaps; attach findings to rows; collect unplaced findings                                 |
-| `UnifiedLineRow`, `SplitLineRow`, `GapRow` | `entities/diff`                        | Row atoms with gutters, `+`/`-` markers, a screen-reader change-type label, `data-anchors` for navigation                |
-| `FindingCard`, `SeverityBadge`             | `entities/finding`                     | Finding with severity label, rule, evidence, impact, recommendation, confidence, related lines, replies                  |
-| `DiffViewModeToggle`                       | `features/toggle-diff-view`            | Unified / split switch for all files                                                                                     |
-| `ExpandContextControls`                    | `features/expand-context`              | "Expand 20 lines" / "Expand all"; explains when the file content is unavailable                                          |
-| `ReplyForm`                                | `features/reply-to-finding`            | Reply input, blank replies rejected, draft kept on failure                                                               |
-| `ResolveFindingToggle`                     | `features/resolve-finding`             | Resolve / unresolve with optimistic update and rollback                                                                  |
-| `DiffViewer`                               | `widgets/diff-viewer`                  | Files with headers, collapsible bodies, inline findings, unplaced findings, scroll-to-line navigation                    |
-| `ReviewSummary`                            | `widgets/review-summary`               | Run, coverage, and publication badges, coverage limitations, counts, next/previous finding                               |
-| `ReviewRunPage`                            | `pages/review-run`                     | Loading, error with retry, in-progress, "no issues" (complete coverage only), composed view                              |
-| `SignInButton`, `UserMenu`                 | `features/auth-by-github`              | "Sign in with GitHub" with a redirecting state; avatar, login, and sign-out                                              |
-| `SignInPage`, `AuthCallbackPage`           | `pages/sign-in`, `pages/auth-callback` | Sign-in, "session expired", configuration errors; "Signing you in…" and cancelled / unverified / failed with "Try again" |
-| `AppShell`, `ShellSkeleton`                | `widgets/app-shell`                    | Signed-in frame (skip link, sidebar, header, main); shell-shaped placeholder while the session restores                  |
-| `Sidebar`, `NavList`, `Header`             | `widgets/app-shell`                    | Collapsible rail with tooltips; the same nav in a mobile drawer; route title, badges, theme and user menus               |
-| `ThemeMenu`, `ThemeToggleGroup`            | `features/switch-theme`                | Light / Dark / System switchers sharing `themeStore`                                                                     |
-| `ReviewRunsPage`                           | `pages/review-runs`                    | Run list, newest first, with run and coverage badges; loading, empty, and error with retry                               |
-| `SettingsPage`, `NotFoundPage`             | `pages/settings`, `pages/not-found`    | Appearance (theme) and Account (GitHub identity, auth mode); "Page not found" with a link to Review runs                 |
+| Component                                  | Slice                                  | Purpose                                                                                                                                                                               |
+| ------------------------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CodeBlock`                                | `shared/ui/code-block`                 | Read-only snippet: line numbers from `startLine`, syntax highlighting, `highlightLines`                                                                                               |
+| `parseUnifiedDiff`                         | `entities/diff`                        | Strict unified/git diff parser: files, hunks, line numbers, renames, binary files; fails as a whole on errors                                                                         |
+| `buildUnifiedRows`, `buildSplitRows`       | `entities/diff`                        | Pure row models for both layouts, including collapsed gaps and revealed context lines                                                                                                 |
+| `expansionsForAnchors`, `placeOn*Rows`     | `entities/diff`                        | Reveal anchored lines hidden in gaps; attach findings to rows; collect unplaced findings                                                                                              |
+| `UnifiedLineRow`, `SplitLineRow`, `GapRow` | `entities/diff`                        | Row atoms with gutters, `+`/`-` markers, a screen-reader change-type label, `data-anchors` for navigation                                                                             |
+| `FindingCard`, `SeverityBadge`             | `entities/finding`                     | Finding with severity label, rule, evidence, impact, recommendation, confidence, related lines, replies                                                                               |
+| `DiffViewModeToggle`                       | `features/toggle-diff-view`            | Unified / split switch for all files                                                                                                                                                  |
+| `ExpandContextControls`                    | `features/expand-context`              | "Expand 20 lines" / "Expand all"; explains when the file content is unavailable                                                                                                       |
+| `ReplyForm`                                | `features/reply-to-finding`            | Reply input, blank replies rejected, draft kept on failure                                                                                                                            |
+| `ResolveFindingToggle`                     | `features/resolve-finding`             | Resolve / unresolve with optimistic update and rollback                                                                                                                               |
+| `DiffViewer`                               | `widgets/diff-viewer`                  | Files with headers, collapsible bodies, inline findings, unplaced findings, scroll-to-line navigation                                                                                 |
+| `ReviewSummary`                            | `widgets/review-summary`               | Run, coverage, and publication badges, coverage limitations, counts, next/previous finding                                                                                            |
+| `ReviewRunPage`                            | `pages/review-run`                     | Loading, error with retry, in-progress, "no issues" (complete coverage only), composed view                                                                                           |
+| `SignInButton`, `UserMenu`                 | `features/auth-by-github`              | "Sign in with GitHub" with a redirecting state; avatar, login, and sign-out                                                                                                           |
+| `SignInPage`, `AuthCallbackPage`           | `pages/sign-in`, `pages/auth-callback` | Sign-in, "session expired", configuration errors; "Signing you in…" and cancelled / unverified / failed with "Try again"                                                              |
+| `AppShell`, `ShellSkeleton`                | `widgets/app-shell`                    | Signed-in frame (skip link, sidebar, header, main); shell-shaped placeholder while the session restores                                                                               |
+| `Sidebar`, `NavList`, `Header`             | `widgets/app-shell`                    | Collapsible rail with tooltips; the same nav in a mobile drawer; route title, badges, theme and user menus                                                                            |
+| `ThemeMenu`, `ThemeToggleGroup`            | `features/switch-theme`                | Light / Dark / System switchers sharing `themeStore`                                                                                                                                  |
+| `ReviewRunsPage`                           | `pages/review-runs`                    | Run list, newest first, with run and coverage badges; loading, empty, and error with retry                                                                                            |
+| `SettingsPage`, `NotFoundPage`             | `pages/settings`, `pages/not-found`    | Appearance (theme) and Account (GitHub identity, auth mode); "Page not found" with a link to Review runs                                                                              |
+| `ProviderBadge`, `VisibilityBadge`         | `entities/repository`                  | "GitHub" / "GitLab" and "Private" / "Public" as text badges                                                                                                                           |
+| `ConnectRepositoryButton`                  | `features/connect-repository`          | "Connect" for one repository: its own pending state, one request per click, inline error that keeps the action available                                                              |
+| `RepositoriesPage`                         | `pages/repositories`                   | Connected repositories by full name with provider, visibility, default branch, connection time and an external link; loading, empty (with "Connect repository"), and error with retry |
+| `ConnectRepositoryPage`                    | `pages/connect-repository`             | Accessible repositories with a name filter, "Connect" or "Connected" per row, the optional GitHub App installation link; loading, empty, and error with retry                         |
 
 Accessibility: all controls are native buttons with accessible names, so they work with Tab and Enter. Every diff line has a visually hidden "Added line" / "Removed line" / "Unchanged line" label. Severity is always shown as text as well as color.
 

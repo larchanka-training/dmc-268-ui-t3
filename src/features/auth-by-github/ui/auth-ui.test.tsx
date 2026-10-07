@@ -37,6 +37,7 @@ describe('SignInButton', () => {
           githubClientId: null,
           githubRedirectUri: 'http://localhost:3000/auth/callback',
           apiBaseUrl: '/api',
+          githubAppInstallUrl: null,
         }}
       />,
     )

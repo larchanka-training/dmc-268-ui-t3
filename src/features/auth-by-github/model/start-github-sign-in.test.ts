@@ -9,6 +9,7 @@ const githubConfig: AppConfig = {
   githubClientId: 'Iv23liAbCdEf123456',
   githubRedirectUri: 'https://review.example.com/auth/callback',
   apiBaseUrl: '/api',
+  githubAppInstallUrl: null,
 }
 
 function fakeLocation(path = '/?run=abc#finding-1') {

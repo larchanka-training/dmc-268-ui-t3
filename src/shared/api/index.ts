@@ -1,5 +1,6 @@
 export { ApiError } from './review-api'
 export type {
+  ConnectRepositoryRequest,
   FileContentRequest,
   FindingStatusRequest,
   ReplyRequest,

@@ -12,6 +12,7 @@ const ok: ConfigResult = {
     githubClientId: 'Iv23liAbCdEf123456',
     githubRedirectUri: 'https://review.example.com/auth/callback',
     apiBaseUrl: '/api',
+    githubAppInstallUrl: null,
   },
 }
 

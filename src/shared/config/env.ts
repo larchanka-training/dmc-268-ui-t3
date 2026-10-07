@@ -13,6 +13,8 @@ export interface AppConfig {
   githubRedirectUri: string
   /** Base URL of the backend API, same-site with the SPA. */
   apiBaseUrl: string
+  /** GitHub App installation page for adding repositories; null when no app slug is set. */
+  githubAppInstallUrl: string | null
 }
 
 export interface ConfigIssue {
@@ -37,6 +39,12 @@ const envSchema = z
     VITE_GITHUB_CLIENT_ID: optional,
     VITE_GITHUB_REDIRECT_URI: optional,
     VITE_API_BASE_URL: optional,
+    VITE_GITHUB_APP_SLUG: optional.pipe(
+      z
+        .string()
+        .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'must be a GitHub App slug (a-z, 0-9, -)')
+        .optional(),
+    ),
   })
   .superRefine((env, ctx) => {
     if (env.VITE_AUTH_MODE !== 'github') return
@@ -91,6 +99,9 @@ export function parseEnv(env: Record<string, unknown>, origin: string): ConfigRe
       githubClientId: parsed.VITE_GITHUB_CLIENT_ID ?? null,
       githubRedirectUri: parsed.VITE_GITHUB_REDIRECT_URI ?? `${origin}${CALLBACK_PATH}`,
       apiBaseUrl: (parsed.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, ''),
+      githubAppInstallUrl: parsed.VITE_GITHUB_APP_SLUG
+        ? `https://github.com/apps/${parsed.VITE_GITHUB_APP_SLUG}/installations/new`
+        : null,
     },
   }
 }

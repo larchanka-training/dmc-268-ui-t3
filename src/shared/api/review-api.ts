@@ -1,4 +1,4 @@
-import type { FindingStatusWire } from './types'
+import type { FindingStatusWire, VcsProviderWire } from './types'
 
 export interface FileContentRequest {
   runId: string
@@ -16,6 +16,12 @@ export interface FindingStatusRequest {
   runId: string
   findingId: string
   status: FindingStatusWire
+}
+
+export interface ConnectRepositoryRequest {
+  provider: VcsProviderWire
+  /** The provider's repository ID, as listed by listAvailableRepositories. */
+  externalId: string
 }
 
 /**
@@ -37,6 +43,18 @@ export interface ReviewApi {
   replyToFinding(request: ReplyRequest, signal?: AbortSignal): Promise<unknown>
   /** Resolves with the updated FindingWire. */
   setFindingStatus(request: FindingStatusRequest, signal?: AbortSignal): Promise<unknown>
+  /** Resolves with a RepositoryWire[]-shaped value: the connected repositories (`GET /repositories`). */
+  listRepositories(signal?: AbortSignal): Promise<unknown>
+  /**
+   * Resolves with an AvailableRepositoryWire[]-shaped value: the repositories the user can
+   * access (`GET /repositories/available`).
+   */
+  listAvailableRepositories(signal?: AbortSignal): Promise<unknown>
+  /**
+   * Connects a repository (`POST /repositories`); resolves with the created RepositoryWire.
+   * Rejects with ApiError 409 when it is already connected, 403/404 when it is not accessible.
+   */
+  connectRepository(request: ConnectRepositoryRequest, signal?: AbortSignal): Promise<unknown>
 }
 
 export type ReviewApiMethod = keyof ReviewApi

@@ -1,6 +1,7 @@
-import { getRouteApi, Outlet, useRouter } from '@tanstack/react-router'
+import { getRouteApi, Outlet, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { AuthCallbackPage } from '@/pages/auth-callback'
+import { ConnectRepositoryPage } from '@/pages/connect-repository'
 import { ReviewRunPage } from '@/pages/review-run'
 import { SettingsPage } from '@/pages/settings'
 import { SignInPage } from '@/pages/sign-in'
@@ -46,6 +47,17 @@ export function AppLayout() {
 export function RunRoute() {
   const { runId } = runRouteApi.useParams()
   return <ReviewRunPage runId={runId} />
+}
+
+export function ConnectRepositoryRoute() {
+  const { config } = rootRouteApi.useRouteContext()
+  const navigate = useNavigate()
+  return (
+    <ConnectRepositoryPage
+      githubAppInstallUrl={config.ok ? config.config.githubAppInstallUrl : null}
+      onConnected={() => void navigate({ to: '/repositories' })}
+    />
+  )
 }
 
 export function SettingsRoute() {

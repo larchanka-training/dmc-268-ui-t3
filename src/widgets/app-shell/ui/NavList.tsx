@@ -1,5 +1,11 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { GitPullRequestIcon, ListChecksIcon, SettingsIcon, type LucideIcon } from 'lucide-react'
+import {
+  FolderGit2Icon,
+  GitPullRequestIcon,
+  ListChecksIcon,
+  SettingsIcon,
+  type LucideIcon,
+} from 'lucide-react'
 import type { ReactElement } from 'react'
 import { useReviewRun } from '@/entities/review-run'
 import { cn } from '@/shared/lib/cn'
@@ -59,7 +65,7 @@ function RailTooltip({
 }
 
 // Links use activeOptions.exact so aria-current="page" marks only the exact page;
-// the section highlight for Review runs is visual only.
+// the section highlight for Repositories and Review runs is visual only.
 
 function OpenRunItem({ runId, collapsed }: { runId: string; collapsed: boolean }) {
   const run = useReviewRun(runId)
@@ -82,6 +88,7 @@ function OpenRunItem({ runId, collapsed }: { runId: string; collapsed: boolean }
 /** The primary navigation list, shared by the desktop sidebar and the mobile drawer. */
 export function NavList({ collapsed = false }: { collapsed?: boolean }) {
   const matchRoute = useMatchRoute()
+  const inRepositories = Boolean(matchRoute({ to: '/repositories', fuzzy: true }))
   const inRuns = Boolean(matchRoute({ to: '/runs', fuzzy: true }))
   const openRun = matchRoute({ to: '/runs/$runId' })
   const runId = openRun ? openRun.runId : undefined
@@ -89,6 +96,18 @@ export function NavList({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <nav aria-label="Main">
       <ul className="space-y-1">
+        <li>
+          <RailTooltip label="Repositories" collapsed={collapsed}>
+            <Link
+              to="/repositories"
+              activeOptions={{ exact: true }}
+              aria-label={collapsed ? 'Repositories' : undefined}
+              className={itemClassName({ collapsed, sectionActive: inRepositories })}
+            >
+              <ItemContent icon={FolderGit2Icon} label="Repositories" collapsed={collapsed} />
+            </Link>
+          </RailTooltip>
+        </li>
         <li>
           <RailTooltip label="Review runs" collapsed={collapsed}>
             <Link

@@ -28,6 +28,7 @@ Every callback URL must match `VITE_GITHUB_REDIRECT_URI` exactly for the build t
 On the app's **General** page:
 
 - **Client ID** (starts with `Iv`) is public. Put it in the UI's `.env.local` as `VITE_GITHUB_CLIENT_ID`.
+- **Public link** (`https://github.com/apps/<slug>`): the last part is the app **slug**. It is public. Put it in `.env.local` as `VITE_GITHUB_APP_SLUG` (optional). The "Connect repository" screen then links to `https://github.com/apps/<slug>/installations/new`, where users install the app on more repositories.
 - **Client secrets** → **Generate a new client secret** creates a confidential value. Give it to the backend only (its `.env`). The backend uses it to exchange the authorization code and to refresh tokens.
 - **Private keys** → **Generate a private key** is needed later, for the bot (installation tokens). It is backend-only too.
 
@@ -44,6 +45,7 @@ VITE_AUTH_MODE=github
 VITE_GITHUB_CLIENT_ID=Iv23li...
 VITE_GITHUB_REDIRECT_URI=http://localhost:5173/auth/callback
 VITE_API_BASE_URL=/api
+VITE_GITHUB_APP_SLUG=dmc-268-review-t3
 # Local backend for `pnpm dev`; Vite proxies /api to it.
 API_PROXY_TARGET=http://localhost:8000
 ```

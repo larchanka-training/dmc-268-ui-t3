@@ -13,6 +13,7 @@ const config: AppConfig = {
   githubClientId: null,
   githubRedirectUri: 'http://localhost:3000/auth/callback',
   apiBaseUrl: '/api',
+  githubAppInstallUrl: null,
 }
 
 function arrive(query: string, returnTo = '/?run=abc') {

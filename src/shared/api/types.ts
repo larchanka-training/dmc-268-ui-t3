@@ -52,3 +52,32 @@ export interface FindingWire {
   status: FindingStatusWire
   replies: ReplyWire[]
 }
+
+export type VcsProviderWire = 'github' | 'gitlab'
+
+/** A repository connected to the reviewer (proposed `GET /repositories` item). */
+export interface RepositoryWire {
+  repository_id: string
+  provider: VcsProviderWire
+  /** The provider's repository ID as a string (GitHub repository ID, GitLab project ID). */
+  external_id: string
+  /** `owner/name`, or `group/subgroup/name` on GitLab. */
+  full_name: string
+  /** Absolute https web URL on the provider. */
+  url: string
+  default_branch: string
+  private: boolean
+  connected_at: string
+}
+
+/** A repository the user can access (proposed `GET /repositories/available` item). */
+export interface AvailableRepositoryWire {
+  provider: VcsProviderWire
+  external_id: string
+  full_name: string
+  url: string
+  default_branch: string
+  private: boolean
+  /** Set when this repository is already connected. */
+  repository_id: string | null
+}

@@ -21,6 +21,7 @@ const config: ConfigResult = {
     githubClientId: null,
     githubRedirectUri: 'http://localhost:3000/auth/callback',
     apiBaseUrl: '/api',
+    githubAppInstallUrl: null,
   },
 }
 
@@ -137,11 +138,32 @@ describe('App session gate', () => {
 })
 
 describe('App routes', () => {
-  it('redirects / to /runs', async () => {
+  it('redirects / to /repositories', async () => {
     storeMockSession()
     renderApp('/')
-    expect(await screen.findByRole('heading', { name: 'Review runs' })).toBeInTheDocument()
-    expect(currentPath()).toBe('/runs')
+    expect(await screen.findByRole('heading', { name: 'Repositories' })).toBeInTheDocument()
+    expect(currentPath()).toBe('/repositories')
+  })
+
+  it('lands a signed-out user who opens / on /repositories after signing in', async () => {
+    const first = renderApp('/')
+    const signIn = await screen.findByRole('button', { name: 'Sign in with GitHub' })
+    expect(currentPath()).toBe('/repositories')
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await userEvent.click(signIn)
+    await waitFor(() => {
+      expect(sessionStorage.getItem(SIGN_IN_ATTEMPT_KEY)).not.toBeNull()
+    })
+    const attempt = JSON.parse(sessionStorage.getItem(SIGN_IN_ATTEMPT_KEY) ?? '{}') as {
+      state: string
+      returnTo: string
+    }
+    expect(attempt.returnTo).toBe('/repositories')
+    first.unmount()
+
+    renderApp(`/auth/callback?code=mock-1&state=${attempt.state}`)
+    expect(await screen.findByRole('list', { name: 'Connected repositories' })).toBeInTheDocument()
+    expect(currentPath()).toBe('/repositories')
   })
 
   it('redirects a legacy ?run= link to the run page', async () => {
@@ -193,6 +215,33 @@ describe('App routes', () => {
       'aria-current',
       'page',
     )
+  })
+
+  it('titles the repository pages', async () => {
+    storeMockSession()
+    renderApp('/repositories')
+    await screen.findByRole('list', { name: 'Connected repositories' })
+    expect(document.title).toBe('Repositories · AI code review')
+    await userEvent.click(screen.getByRole('link', { name: 'Connect repository' }))
+    expect(await screen.findByRole('heading', { name: 'Connect repository' })).toBeInTheDocument()
+    expect(currentPath()).toBe('/repositories/connect')
+    expect(document.title).toBe('Connect repository · AI code review')
+  })
+
+  it('requests no repository data while signed out', async () => {
+    const { createReviewApi } = renderApp('/repositories')
+    expect(await screen.findByRole('button', { name: 'Sign in with GitHub' })).toBeInTheDocument()
+    expect(createReviewApi).not.toHaveBeenCalled()
+  })
+
+  it('connects a repository and shows it in the list', async () => {
+    storeMockSession()
+    renderApp('/repositories/connect')
+    await screen.findByRole('list', { name: 'Accessible repositories' })
+    await userEvent.click(screen.getByRole('button', { name: 'Connect acme/docs' }))
+    const list = await screen.findByRole('list', { name: 'Connected repositories' })
+    expect(currentPath()).toBe('/repositories')
+    expect(within(list).getByText('acme/docs')).toBeInTheDocument()
   })
 
   it('opens a run from the list', async () => {

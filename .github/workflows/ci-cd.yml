@@ -14,7 +14,7 @@ env:
 
 jobs:
   checks:
-    name: Types, lint, format, build
+    name: Types, lint, test, format, build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -28,6 +28,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check-types
       - run: pnpm lint
+      - run: pnpm test
       - run: pnpm format:check
       - run: pnpm build
 

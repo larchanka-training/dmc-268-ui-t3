@@ -1,0 +1,221 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Every color is a CSS variable on :root, redefined for dark
+ * mode. Dark mode follows the OS unless <html data-theme="light|dark"> overrides it.
+ * Severity text/background pairs keep a contrast ratio of at least 4.5:1.
+ */
+
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
+
+:root {
+  /* Surfaces (shadcn names) */
+  --background: #fff;
+  --foreground: #1f2328;
+  --card: #fff;
+  --card-foreground: #1f2328;
+  --popover: #fff;
+  --popover-foreground: #1f2328;
+  --primary: #1f2328;
+  --primary-foreground: #fff;
+  --secondary: #f6f8fa;
+  --secondary-foreground: #1f2328;
+  --muted: #f6f8fa;
+  --muted-foreground: #59636e;
+  --accent: #eff2f5;
+  --accent-foreground: #1f2328;
+  --destructive: #cf222e;
+  --border: #d1d9e0;
+  --input: #d1d9e0;
+  --ring: #0969da;
+  --radius: 0.5rem;
+
+  /* Diff */
+  --diff-add-bg: #e6ffec;
+  --diff-add-gutter: #ccffd8;
+  --diff-del-bg: #ffebe9;
+  --diff-del-gutter: #ffd7d5;
+  --diff-ctx-bg: #fff;
+  --diff-gap-bg: #ddf4ff;
+  --diff-gap-fg: #0550ae;
+  --diff-filler-bg: #f6f8fa;
+  --diff-highlight: #fff8c5;
+  --diff-add-fg: #1a7f37;
+  --diff-del-fg: #cf222e;
+
+  /* Severity: text color + tinted background */
+  --severity-critical: #9f1239;
+  --severity-critical-bg: #ffe4e6;
+  --severity-high: #9a3412;
+  --severity-high-bg: #ffedd5;
+  --severity-medium: #854d0e;
+  --severity-medium-bg: #fef9c3;
+  --severity-low: #1e40af;
+  --severity-low-bg: #dbeafe;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --background: #0d1117;
+    --foreground: #e6edf3;
+    --card: #151b23;
+    --card-foreground: #e6edf3;
+    --popover: #151b23;
+    --popover-foreground: #e6edf3;
+    --primary: #e6edf3;
+    --primary-foreground: #0d1117;
+    --secondary: #212830;
+    --secondary-foreground: #e6edf3;
+    --muted: #151b23;
+    --muted-foreground: #9198a1;
+    --accent: #262c36;
+    --accent-foreground: #e6edf3;
+    --destructive: #f85149;
+    --border: #3d444d;
+    --input: #3d444d;
+    --ring: #4493f8;
+    --diff-add-bg: #12261e;
+    --diff-add-gutter: #1b4721;
+    --diff-del-bg: #25171c;
+    --diff-del-gutter: #542426;
+    --diff-ctx-bg: #0d1117;
+    --diff-gap-bg: #121d2f;
+    --diff-gap-fg: #79c0ff;
+    --diff-filler-bg: #151b23;
+    --diff-highlight: #3b2e05;
+    --diff-add-fg: #3fb950;
+    --diff-del-fg: #f85149;
+    --severity-critical: #fecdd3;
+    --severity-critical-bg: #4c0519;
+    --severity-high: #fed7aa;
+    --severity-high-bg: #431407;
+    --severity-medium: #fef08a;
+    --severity-medium-bg: #422006;
+    --severity-low: #bfdbfe;
+    --severity-low-bg: #172554;
+  }
+}
+
+:root[data-theme='dark'] {
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --card: #151b23;
+  --card-foreground: #e6edf3;
+  --popover: #151b23;
+  --popover-foreground: #e6edf3;
+  --primary: #e6edf3;
+  --primary-foreground: #0d1117;
+  --secondary: #212830;
+  --secondary-foreground: #e6edf3;
+  --muted: #151b23;
+  --muted-foreground: #9198a1;
+  --accent: #262c36;
+  --accent-foreground: #e6edf3;
+  --destructive: #f85149;
+  --border: #3d444d;
+  --input: #3d444d;
+  --ring: #4493f8;
+  --diff-add-bg: #12261e;
+  --diff-add-gutter: #1b4721;
+  --diff-del-bg: #25171c;
+  --diff-del-gutter: #542426;
+  --diff-ctx-bg: #0d1117;
+  --diff-gap-bg: #121d2f;
+  --diff-gap-fg: #79c0ff;
+  --diff-filler-bg: #151b23;
+  --diff-highlight: #3b2e05;
+  --diff-add-fg: #3fb950;
+  --diff-del-fg: #f85149;
+  --severity-critical: #fecdd3;
+  --severity-critical-bg: #4c0519;
+  --severity-high: #fed7aa;
+  --severity-high-bg: #431407;
+  --severity-medium: #fef08a;
+  --severity-medium-bg: #422006;
+  --severity-low: #bfdbfe;
+  --severity-low-bg: #172554;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-diff-add: var(--diff-add-bg);
+  --color-diff-add-gutter: var(--diff-add-gutter);
+  --color-diff-del: var(--diff-del-bg);
+  --color-diff-del-gutter: var(--diff-del-gutter);
+  --color-diff-ctx: var(--diff-ctx-bg);
+  --color-diff-gap: var(--diff-gap-bg);
+  --color-diff-gap-foreground: var(--diff-gap-fg);
+  --color-diff-filler: var(--diff-filler-bg);
+  --color-diff-highlight: var(--diff-highlight);
+  --color-diff-add-foreground: var(--diff-add-fg);
+  --color-diff-del-foreground: var(--diff-del-fg);
+  --color-severity-critical: var(--severity-critical);
+  --color-severity-critical-bg: var(--severity-critical-bg);
+  --color-severity-high: var(--severity-high);
+  --color-severity-high-bg: var(--severity-high-bg);
+  --color-severity-medium: var(--severity-medium);
+  --color-severity-medium-bg: var(--severity-medium-bg);
+  --color-severity-low: var(--severity-low);
+  --color-severity-low-bg: var(--severity-low-bg);
+  --font-mono:
+    ui-monospace, sfmono-regular, 'SF Mono', menlo, consolas, 'Liberation Mono', monospace;
+  --leading-code: 20px;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Syntax tokens carry both theme colors as CSS variables (see shared/lib/highlighter). */
+.code-token {
+  color: var(--shiki-light, inherit);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .code-token {
+    color: var(--shiki-dark, inherit);
+  }
+}
+
+:root[data-theme='dark'] .code-token {
+  color: var(--shiki-dark, inherit);
+}

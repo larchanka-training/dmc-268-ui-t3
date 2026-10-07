@@ -13,6 +13,8 @@ pnpm dev
 
 Правила, скиллы и шаблоны разработки команды: [.agents/README.md](.agents/README.md).
 
+Архитектура фронтенда (слои FSD, управление состоянием, UI-кит, компоненты диффа и мок состояния приложения): [FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md).
+
 ## Quality checks
 
 | Command                             | What it does                                                                     |
@@ -20,6 +22,7 @@ pnpm dev
 | `pnpm lint`                         | ESLint (typescript-eslint strict, type-aware) + Stylelint, zero warnings allowed |
 | `pnpm lint:fix`                     | same, auto-fixing what it can                                                    |
 | `pnpm check-types`                  | `tsc --noEmit` (strict)                                                          |
+| `pnpm test`                         | Vitest: unit and component tests                                                 |
 | `pnpm format` / `pnpm format:check` | Prettier                                                                         |
 | `pnpm build`                        | type-check + production build into `dist/`                                       |
 

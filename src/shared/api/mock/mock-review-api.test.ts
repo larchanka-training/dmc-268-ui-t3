@@ -14,6 +14,16 @@ describe('createMockReviewApi', () => {
     ).resolves.toBeNull()
   })
 
+  it('lists the fixture run', async () => {
+    await expect(createMockReviewApi().listRuns()).resolves.toEqual([mockAppState.server.run])
+  })
+
+  it('lists the runs of the injected state', async () => {
+    const run = { ...mockAppState.server.run, run_id: 'run-x' }
+    const api = createMockReviewApi({ state: { ...mockAppState.server, run } })
+    await expect(api.listRuns()).resolves.toEqual([run])
+  })
+
   it('rejects an unknown run with a 404', async () => {
     const api = createMockReviewApi()
     await expect(api.getRun('missing')).rejects.toMatchObject({ status: 404 })
@@ -95,6 +105,7 @@ describe('mock mutations', () => {
 describe('failuresFromSearch', () => {
   it('keeps only known method names', () => {
     expect(failuresFromSearch('?mockFail=replyToFinding,unknown')).toEqual(['replyToFinding'])
+    expect(failuresFromSearch('?mockFail=listRuns')).toEqual(['listRuns'])
     expect(failuresFromSearch('')).toEqual([])
   })
 })

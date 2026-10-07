@@ -84,6 +84,8 @@ export function createMockReviewApi(options: MockReviewApiOptions = {}): MockRev
       if (isFailing) failing.add(method)
       else failing.delete(method)
     },
+    // The mock state holds one run; the list is derived from it so the state shape stays as documented.
+    listRuns: (signal) => respond('listRuns', signal, () => [state.run]),
     getRun: (runId, signal) =>
       respond('getRun', signal, () => {
         requireRun(runId)
@@ -131,6 +133,7 @@ export function createMockReviewApi(options: MockReviewApiOptions = {}): MockRev
  */
 export function failuresFromSearch(search: string): ReviewApiMethod[] {
   const methods: ReviewApiMethod[] = [
+    'listRuns',
     'getRun',
     'getDiff',
     'getFindings',

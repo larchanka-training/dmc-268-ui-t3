@@ -16,6 +16,22 @@ vi.mock('@/shared/lib/highlighter/load', async (importOriginal) => {
 // jsdom does not implement scrolling.
 Element.prototype.scrollIntoView = vi.fn()
 
+// jsdom has no ResizeObserver; Radix popper content (tooltips, menus) observes its size.
+vi.stubGlobal(
+  'ResizeObserver',
+  class {
+    observe() {
+      // no-op
+    }
+    unobserve() {
+      // no-op
+    }
+    disconnect() {
+      // no-op
+    }
+  },
+)
+
 afterEach(() => {
   cleanup()
 })

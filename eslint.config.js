@@ -86,6 +86,13 @@ export default defineConfig([
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      // TanStack Router's `throw redirect(...)` throws a Response-based Redirect by design.
+      '@typescript-eslint/only-throw-error': [
+        'error',
+        { allow: [{ from: 'package', package: '@tanstack/router-core', name: 'Redirect' }] },
+      ],
+    },
   },
   ...LAYERS.flatMap(layerBoundaries),
   // Last: turns off stylistic rules that would fight Prettier.

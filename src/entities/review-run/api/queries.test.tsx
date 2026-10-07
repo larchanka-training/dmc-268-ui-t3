@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ReviewApi, ReviewRunWire } from '@/shared/api'
 import { mockAppState } from '@/shared/api/mock/app-state.mock'
 import { createMockReviewApi } from '@/shared/api/mock/mock-review-api'
 import { createWrapper } from '@/shared/lib/test/render'
-import { useReviewRun } from './queries'
+import { useReviewRun, useReviewRuns } from './queries'
 
 function runWire(runId: string, title: string): ReviewRunWire {
   return { ...mockAppState.server.run, run_id: runId, title }
@@ -58,6 +58,34 @@ describe('useReviewRun', () => {
       getRun: () => Promise.resolve({ ...mockAppState.server.run, status: 'DONE' }),
     }
     const { result } = renderHook(() => useReviewRun('x'), { wrapper: createWrapper({ api }) })
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+    expect(result.current.data).toBeUndefined()
+  })
+})
+
+describe('useReviewRuns', () => {
+  it('parses the list and passes the abort signal', async () => {
+    const api = createMockReviewApi()
+    const listRuns = vi.spyOn(api, 'listRuns')
+    const { result } = renderHook(() => useReviewRuns(), { wrapper: createWrapper({ api }) })
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+    expect(result.current.data).toEqual([
+      expect.objectContaining({ id: mockAppState.server.run.run_id, pullRequest: 42 }),
+    ])
+    expect(listRuns.mock.calls[0]?.[0]).toBeInstanceOf(AbortSignal)
+  })
+
+  it('enters the error state when one entry is invalid', async () => {
+    const api: ReviewApi = {
+      ...createMockReviewApi(),
+      listRuns: () =>
+        Promise.resolve([runWire('run-a', 'A'), { ...runWire('run-b', 'B'), status: 'DONE' }]),
+    }
+    const { result } = renderHook(() => useReviewRuns(), { wrapper: createWrapper({ api }) })
     await waitFor(() => {
       expect(result.current.isError).toBe(true)
     })

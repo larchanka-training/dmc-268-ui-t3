@@ -46,6 +46,9 @@ export const reviewRunSchema = z
     createdAt: wire.created_at,
   }))
 
+/** Validates a ReviewRunWire[] payload (the run list). */
+export const reviewRunListSchema = z.array(reviewRunSchema)
+
 export type ReviewRun = z.output<typeof reviewRunSchema>
 export type RunStatus = ReviewRun['status']
 export type CoverageStatus = ReviewRun['coverage']['status']

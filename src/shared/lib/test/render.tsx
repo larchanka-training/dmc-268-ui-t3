@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, type RenderOptions } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
-import { ReviewApiProvider, type ReviewApi } from '@/shared/api'
+import { AuthApiProvider, ReviewApiProvider, type AuthApi, type ReviewApi } from '@/shared/api'
+import { createMockAuthApi } from '@/shared/api/auth/mock-auth-api'
 import { createMockReviewApi } from '@/shared/api/mock/mock-review-api'
 import { TooltipProvider } from '@/shared/ui/tooltip'
 
@@ -16,19 +17,23 @@ export function createTestQueryClient(): QueryClient {
 
 interface ProviderOptions {
   api?: ReviewApi
+  authApi?: AuthApi
   queryClient?: QueryClient
 }
 
 export function createWrapper({
   api = createMockReviewApi(),
+  authApi = createMockAuthApi(),
   queryClient = createTestQueryClient(),
 }: ProviderOptions = {}) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ReviewApiProvider api={api}>
-          <TooltipProvider>{children}</TooltipProvider>
-        </ReviewApiProvider>
+        <AuthApiProvider api={authApi}>
+          <ReviewApiProvider api={api}>
+            <TooltipProvider>{children}</TooltipProvider>
+          </ReviewApiProvider>
+        </AuthApiProvider>
       </QueryClientProvider>
     )
   }
@@ -39,6 +44,6 @@ export function renderWithProviders(
   ui: ReactElement,
   options: ProviderOptions & Omit<RenderOptions, 'wrapper'> = {},
 ) {
-  const { api, queryClient, ...renderOptions } = options
-  return render(ui, { wrapper: createWrapper({ api, queryClient }), ...renderOptions })
+  const { api, authApi, queryClient, ...renderOptions } = options
+  return render(ui, { wrapper: createWrapper({ api, authApi, queryClient }), ...renderOptions })
 }

@@ -23,6 +23,8 @@ export interface FindingStatusRequest {
  * unvalidated wire data; callers parse it with the entity Zod schemas.
  */
 export interface ReviewApi {
+  /** Resolves with a ReviewRunWire[]-shaped value: the user's runs (`GET /runs`). */
+  listRuns(signal?: AbortSignal): Promise<unknown>
   /** Resolves with a ReviewRunWire-shaped value. */
   getRun(runId: string, signal?: AbortSignal): Promise<unknown>
   /** Resolves with unified diff text. */

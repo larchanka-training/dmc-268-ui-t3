@@ -19,6 +19,9 @@
 }
 
 :root {
+  /* Native scrollbars and form controls follow the active theme. */
+  color-scheme: light;
+
   /* Surfaces (shadcn names) */
   --background: #fff;
   --foreground: #1f2328;
@@ -66,6 +69,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    color-scheme: dark;
+
     --background: #0d1117;
     --foreground: #e6edf3;
     --card: #151b23;
@@ -107,6 +112,8 @@
 }
 
 :root[data-theme='dark'] {
+  color-scheme: dark;
+
   --background: #0d1117;
   --foreground: #e6edf3;
   --card: #151b23;

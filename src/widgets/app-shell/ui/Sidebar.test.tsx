@@ -45,6 +45,17 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: 'Review runs' })).not.toHaveClass('font-medium')
   })
 
+  it('highlights the Repositories section on a repository settings page, not Settings', async () => {
+    await renderWithRouter(<Sidebar />, {
+      path: '/repositories/repo-1/settings',
+      routes: ['/repositories/$repositoryId/settings'],
+    })
+    expect(currentLinks()).toEqual([])
+    expect(screen.getByRole('link', { name: 'Repositories' })).toHaveClass('font-medium')
+    expect(screen.getByRole('link', { name: 'Settings' })).not.toHaveClass('font-medium')
+    expect(screen.getByRole('link', { name: 'Review runs' })).not.toHaveClass('font-medium')
+  })
+
   it('marks only Settings as current on /settings', async () => {
     await renderWithRouter(<Sidebar />, { path: '/settings' })
     expect(currentLinks().map((link) => link.textContent)).toEqual(['Settings'])

@@ -1,7 +1,12 @@
 import { ApiError, type ReviewApi, type ReviewApiMethod } from '../review-api'
-import type { FindingWire, ReplyWire, RepositoryWire } from '../types'
+import type { FindingWire, ReplyWire, RepositoryWire, ReviewSettingsWire } from '../types'
 import { mockAppState, type MockAppState } from './app-state.mock'
-import { mockRepositoryState, type MockRepositoryState } from './repositories.mock'
+import {
+  defaultReviewSettings,
+  missingRulesFile,
+  mockRepositoryState,
+  type MockRepositoryState,
+} from './repositories.mock'
 
 type MockServerState = MockAppState['server']
 
@@ -84,6 +89,21 @@ export function createMockReviewApi(options: MockReviewApiOptions = {}): MockRev
     return finding
   }
 
+  function requireRepository(repositoryId: string): RepositoryWire {
+    const repository = repositories.connected.find((item) => item.repository_id === repositoryId)
+    if (!repository) {
+      throw new ApiError(`Repository ${repositoryId} not found`, 404)
+    }
+    return repository
+  }
+
+  /** Every connected repository has settings and rules; a fixture gap falls back to the defaults. */
+  function settingsOf(repository: RepositoryWire) {
+    return (repositories.settings[repository.repository_id] ??= defaultReviewSettings(
+      repository.connected_at,
+    ))
+  }
+
   return {
     setFailure(method, isFailing) {
       if (isFailing) failing.add(method)
@@ -157,7 +177,31 @@ export function createMockReviewApi(options: MockReviewApiOptions = {}): MockRev
         }
         available.repository_id = repository.repository_id
         repositories.connected.push(repository)
+        repositories.settings[repository.repository_id] = defaultReviewSettings(
+          repository.connected_at,
+        )
+        repositories.rules[repository.repository_id] = missingRulesFile(repository.default_branch)
         return repository
+      }),
+    getRepository: (repositoryId, signal) =>
+      respond('getRepository', signal, () => requireRepository(repositoryId)),
+    getReviewSettings: (repositoryId, signal) =>
+      respond('getReviewSettings', signal, () => settingsOf(requireRepository(repositoryId))),
+    updateReviewSettings: ({ repositoryId, settings }, signal) =>
+      respond('updateReviewSettings', signal, () => {
+        requireRepository(repositoryId)
+        // Mirrors the client check, so the rejection path can be exercised in mock mode.
+        if (settings.branch_filter.some((pattern) => /\s/.test(pattern))) {
+          throw new ApiError('A branch pattern contains whitespace', 422)
+        }
+        const saved: ReviewSettingsWire = { ...settings, updated_at: now().toISOString() }
+        repositories.settings[repositoryId] = saved
+        return saved
+      }),
+    getRepositoryRules: (repositoryId, signal) =>
+      respond('getRepositoryRules', signal, () => {
+        const repository = requireRepository(repositoryId)
+        return (repositories.rules[repositoryId] ??= missingRulesFile(repository.default_branch))
       }),
   }
 }
@@ -177,6 +221,10 @@ export function failuresFromSearch(search: string): ReviewApiMethod[] {
     'listRepositories',
     'listAvailableRepositories',
     'connectRepository',
+    'getRepository',
+    'getReviewSettings',
+    'updateReviewSettings',
+    'getRepositoryRules',
   ]
   const requested = new URLSearchParams(search).get('mockFail')?.split(',') ?? []
   return methods.filter((method) => requested.includes(method))

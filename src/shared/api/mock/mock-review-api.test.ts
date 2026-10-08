@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ApiError } from '../review-api'
+import { ApiError, type UpdateReviewSettingsRequest } from '../review-api'
 import { mockAppState, RUN_ID } from './app-state.mock'
 import { createMockReviewApi, failuresFromSearch } from './mock-review-api'
 import { mockRepositoryState } from './repositories.mock'
@@ -151,10 +151,12 @@ describe('mock repositories', () => {
   })
 
   it('uses the injected repositories without changing the fixtures', async () => {
-    const api = createMockReviewApi({ repositories: { connected: [], available: [] } })
+    const api = createMockReviewApi({
+      repositories: { connected: [], available: [], settings: {}, rules: {} },
+    })
     await expect(api.listRepositories()).resolves.toEqual([])
     await createMockReviewApi().connectRepository({ provider: 'github', externalId: '810000004' })
-    expect(mockRepositoryState.connected).toHaveLength(3)
+    expect(mockRepositoryState.connected).toHaveLength(4)
     expect(mockRepositoryState.available[3].repository_id).toBeNull()
   })
 
@@ -172,6 +174,112 @@ describe('mock repositories', () => {
   })
 })
 
+describe('mock repository settings and rules', () => {
+  const now = () => new Date('2026-10-08T12:00:00Z')
+
+  it('returns a connected repository, its settings and its rules', async () => {
+    const api = createMockReviewApi()
+    await expect(api.getRepository('repo-1')).resolves.toEqual(mockRepositoryState.connected[0])
+    await expect(api.getReviewSettings('repo-1')).resolves.toEqual(
+      mockRepositoryState.settings['repo-1'],
+    )
+    await expect(api.getRepositoryRules('repo-1')).resolves.toEqual(
+      mockRepositoryState.rules['repo-1'],
+    )
+  })
+
+  it('covers every rules file status', () => {
+    expect(Object.values(mockRepositoryState.rules).map((rules) => rules.status)).toEqual(
+      expect.arrayContaining(['custom', 'missing', 'invalid']),
+    )
+  })
+
+  it('rejects an unknown repository with a 404', async () => {
+    const api = createMockReviewApi()
+    await expect(api.getRepository('missing')).rejects.toMatchObject({ status: 404 })
+    await expect(api.getReviewSettings('missing')).rejects.toMatchObject({ status: 404 })
+    await expect(api.getRepositoryRules('missing')).rejects.toMatchObject({ status: 404 })
+    await expect(
+      api.updateReviewSettings({
+        repositoryId: 'missing',
+        settings: { auto_review: true, branch_filter: [], severity_threshold: 'all' },
+      }),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('saves settings and returns them on the next read', async () => {
+    const api = createMockReviewApi({ now })
+    const settings: UpdateReviewSettingsRequest['settings'] = {
+      auto_review: false,
+      branch_filter: ['develop'],
+      severity_threshold: 'critical_only',
+    }
+    const saved = { ...settings, updated_at: '2026-10-08T12:00:00.000Z' }
+    await expect(api.updateReviewSettings({ repositoryId: 'repo-2', settings })).resolves.toEqual(
+      saved,
+    )
+    await expect(api.getReviewSettings('repo-2')).resolves.toEqual(saved)
+    expect(mockRepositoryState.settings['repo-2'].auto_review).toBe(true)
+  })
+
+  it('rejects a branch pattern with whitespace with a 422 and keeps the old settings', async () => {
+    const api = createMockReviewApi()
+    await expect(
+      api.updateReviewSettings({
+        repositoryId: 'repo-1',
+        settings: { auto_review: true, branch_filter: ['feature x'], severity_threshold: 'all' },
+      }),
+    ).rejects.toMatchObject({ status: 422 })
+    await expect(api.getReviewSettings('repo-1')).resolves.toEqual(
+      mockRepositoryState.settings['repo-1'],
+    )
+  })
+
+  it('gives a newly connected repository default settings and missing-file rules', async () => {
+    const api = createMockReviewApi({ now })
+    const created = (await api.connectRepository({
+      provider: 'github',
+      externalId: '810000005',
+    })) as { repository_id: string }
+    await expect(api.getReviewSettings(created.repository_id)).resolves.toMatchObject({
+      auto_review: true,
+      branch_filter: [],
+      severity_threshold: 'all',
+    })
+    await expect(api.getRepositoryRules(created.repository_id)).resolves.toMatchObject({
+      status: 'missing',
+      branch: 'trunk',
+      commit_sha: null,
+      file_url: null,
+    })
+  })
+
+  it('fails while the failure switch is on', async () => {
+    const api = createMockReviewApi({
+      failures: [
+        'getRepository',
+        'getReviewSettings',
+        'updateReviewSettings',
+        'getRepositoryRules',
+      ],
+    })
+    await expect(api.getRepository('repo-1')).rejects.toMatchObject({ status: 500 })
+    await expect(api.getReviewSettings('repo-1')).rejects.toMatchObject({ status: 500 })
+    await expect(api.getRepositoryRules('repo-1')).rejects.toMatchObject({ status: 500 })
+    await expect(
+      api.updateReviewSettings({
+        repositoryId: 'repo-1',
+        settings: { auto_review: false, branch_filter: [], severity_threshold: 'all' },
+      }),
+    ).rejects.toMatchObject({ status: 500 })
+    api.setFailure('updateReviewSettings', false)
+    api.setFailure('getReviewSettings', false)
+    await expect(api.getReviewSettings('repo-1')).resolves.toEqual(
+      mockRepositoryState.settings['repo-1'],
+    )
+  })
+})
+
 describe('failuresFromSearch', () => {
   it('keeps only known method names', () => {
     expect(failuresFromSearch('?mockFail=replyToFinding,unknown')).toEqual(['replyToFinding'])
@@ -179,6 +287,10 @@ describe('failuresFromSearch', () => {
     expect(failuresFromSearch('?mockFail=connectRepository,listRepositories')).toEqual([
       'listRepositories',
       'connectRepository',
+    ])
+    expect(failuresFromSearch('?mockFail=getRepositoryRules,updateReviewSettings')).toEqual([
+      'updateReviewSettings',
+      'getRepositoryRules',
     ])
     expect(failuresFromSearch('')).toEqual([])
   })

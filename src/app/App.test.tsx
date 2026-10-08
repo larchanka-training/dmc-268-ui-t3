@@ -228,6 +228,58 @@ describe('App routes', () => {
     expect(document.title).toBe('Connect repository · AI code review')
   })
 
+  it('titles the repository settings page', async () => {
+    storeMockSession()
+    renderApp('/repositories/repo-1/settings')
+    expect(await screen.findByRole('heading', { level: 1, name: 'acme/web' })).toBeInTheDocument()
+    expect(document.title).toBe('Repository settings · AI code review')
+  })
+
+  it('brings a signed-out user back to a repository settings deep link after sign-in', async () => {
+    const first = renderApp('/repositories/repo-1/settings')
+    const signIn = await screen.findByRole('button', { name: 'Sign in with GitHub' })
+    expect(first.createReviewApi).not.toHaveBeenCalled()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await userEvent.click(signIn)
+    await waitFor(() => {
+      expect(sessionStorage.getItem(SIGN_IN_ATTEMPT_KEY)).not.toBeNull()
+    })
+    const attempt = JSON.parse(sessionStorage.getItem(SIGN_IN_ATTEMPT_KEY) ?? '{}') as {
+      state: string
+      returnTo: string
+    }
+    expect(attempt.returnTo).toBe('/repositories/repo-1/settings')
+    first.unmount()
+
+    renderApp(`/auth/callback?code=mock-1&state=${attempt.state}`)
+    expect(await screen.findByRole('heading', { level: 1, name: 'acme/web' })).toBeInTheDocument()
+    expect(currentPath()).toBe('/repositories/repo-1/settings')
+  })
+
+  it('opens repository settings from the list, saves them and shows them again', async () => {
+    storeMockSession()
+    renderApp('/repositories')
+    await screen.findByRole('list', { name: 'Connected repositories' })
+    await userEvent.click(screen.getByRole('link', { name: 'Settings for acme/web' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'acme/web' })).toBeInTheDocument()
+    expect(currentPath()).toBe('/repositories/repo-1/settings')
+
+    await userEvent.click(await screen.findByRole('radio', { name: 'Only critical' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Settings saved')
+
+    // The page's back link, not the sidebar item.
+    await userEvent.click(
+      within(screen.getByRole('main')).getByRole('link', { name: 'Repositories' }),
+    )
+    await screen.findByRole('list', { name: 'Connected repositories' })
+    await userEvent.click(screen.getByRole('link', { name: 'Settings for acme/web' }))
+    expect(await screen.findByRole('radio', { name: 'Only critical' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+  })
+
   it('requests no repository data while signed out', async () => {
     const { createReviewApi } = renderApp('/repositories')
     expect(await screen.findByRole('button', { name: 'Sign in with GitHub' })).toBeInTheDocument()

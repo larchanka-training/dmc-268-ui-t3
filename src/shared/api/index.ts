@@ -6,6 +6,7 @@ export type {
   ReplyRequest,
   ReviewApi,
   ReviewApiMethod,
+  UpdateReviewSettingsRequest,
 } from './review-api'
 export { useReviewApi } from './review-api-context'
 export { ReviewApiProvider } from './ReviewApiProvider'

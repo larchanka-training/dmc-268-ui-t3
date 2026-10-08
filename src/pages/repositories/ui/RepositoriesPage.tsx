@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ExternalLinkIcon, GitBranchIcon, PlusIcon } from 'lucide-react'
+import { ExternalLinkIcon, GitBranchIcon, PlusIcon, SettingsIcon } from 'lucide-react'
 import {
   PROVIDER_LABEL,
   ProviderBadge,
@@ -50,16 +50,27 @@ function RepositoryEntry({ repository }: { repository: Repository }) {
           </span>
         </span>
       </div>
-      <Button asChild variant="ghost" size="icon">
-        <a
-          href={repository.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Open ${repository.fullName} on ${provider}`}
-        >
-          <ExternalLinkIcon aria-hidden />
-        </a>
-      </Button>
+      <div className="flex shrink-0 gap-1">
+        <Button asChild variant="ghost" size="icon">
+          <Link
+            to="/repositories/$repositoryId/settings"
+            params={{ repositoryId: repository.id }}
+            aria-label={`Settings for ${repository.fullName}`}
+          >
+            <SettingsIcon aria-hidden />
+          </Link>
+        </Button>
+        <Button asChild variant="ghost" size="icon">
+          <a
+            href={repository.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${repository.fullName} on ${provider}`}
+          >
+            <ExternalLinkIcon aria-hidden />
+          </a>
+        </Button>
+      </div>
     </li>
   )
 }

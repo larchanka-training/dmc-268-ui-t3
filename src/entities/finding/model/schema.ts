@@ -1,6 +1,7 @@
 import { z } from 'zod'
+import { SEVERITIES } from '@/shared/lib/severity'
 
-export const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const
+export { SEVERITIES }
 export const FINDING_STATUSES = ['open', 'resolved'] as const
 
 const nonEmpty = z.string().trim().min(1)

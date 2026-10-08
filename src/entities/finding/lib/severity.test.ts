@@ -5,14 +5,9 @@ import { countByGroup, GROUP_LABEL, highestGroup, severityGroup, sortBySeverity 
 const of = (...levels: Severity[]) => levels.map((severity) => ({ severity }))
 
 describe('severity display groups', () => {
-  it('maps levels to groups', () => {
-    expect((['critical', 'high', 'medium', 'low'] as const).map(severityGroup)).toEqual([
-      'critical',
-      'warning',
-      'warning',
-      'info',
-    ])
-    expect(GROUP_LABEL).toEqual({ critical: 'Critical', warning: 'Warning', info: 'Info' })
+  it('re-exports the shared display groups', () => {
+    expect(severityGroup('medium')).toBe('warning')
+    expect(GROUP_LABEL.info).toBe('Info')
   })
 
   it('counts findings by group', () => {

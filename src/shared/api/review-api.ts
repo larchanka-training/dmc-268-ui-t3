@@ -1,4 +1,4 @@
-import type { FindingStatusWire, VcsProviderWire } from './types'
+import type { FindingStatusWire, ReviewSettingsWire, VcsProviderWire } from './types'
 
 export interface FileContentRequest {
   runId: string
@@ -22,6 +22,12 @@ export interface ConnectRepositoryRequest {
   provider: VcsProviderWire
   /** The provider's repository ID, as listed by listAvailableRepositories. */
   externalId: string
+}
+
+export interface UpdateReviewSettingsRequest {
+  repositoryId: string
+  /** The whole settings object: the update replaces it. */
+  settings: Omit<ReviewSettingsWire, 'updated_at'>
 }
 
 /**
@@ -55,6 +61,20 @@ export interface ReviewApi {
    * Rejects with ApiError 409 when it is already connected, 403/404 when it is not accessible.
    */
   connectRepository(request: ConnectRepositoryRequest, signal?: AbortSignal): Promise<unknown>
+  /**
+   * Resolves with a RepositoryWire-shaped value (`GET /repositories/{id}`).
+   * Rejects with ApiError 404 when the repository is unknown or not connected for the user.
+   */
+  getRepository(repositoryId: string, signal?: AbortSignal): Promise<unknown>
+  /** Resolves with a ReviewSettingsWire-shaped value (`GET /repositories/{id}/settings`); 404 as above. */
+  getReviewSettings(repositoryId: string, signal?: AbortSignal): Promise<unknown>
+  /**
+   * Replaces the review settings (`PUT /repositories/{id}/settings`); resolves with the saved
+   * ReviewSettingsWire. Rejects with ApiError 422 when the server rejects the values, 404 as above.
+   */
+  updateReviewSettings(request: UpdateReviewSettingsRequest, signal?: AbortSignal): Promise<unknown>
+  /** Resolves with a RepositoryRulesWire-shaped value (`GET /repositories/{id}/rules`); 404 as above. */
+  getRepositoryRules(repositoryId: string, signal?: AbortSignal): Promise<unknown>
 }
 
 export type ReviewApiMethod = keyof ReviewApi

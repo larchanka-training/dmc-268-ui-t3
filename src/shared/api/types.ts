@@ -107,3 +107,52 @@ export interface AvailableRepositoryWire {
   /** Set when this repository is already connected. */
   repository_id: string | null
 }
+
+/** The lowest severity display group the reviewer reports for a repository (proposed). */
+export type SeverityThresholdWire = 'all' | 'warning_and_critical' | 'critical_only'
+
+/** A repository's review settings (proposed `GET`/`PUT /repositories/{id}/settings`). */
+export interface ReviewSettingsWire {
+  auto_review: boolean
+  /** Target-branch patterns; `*` matches within a path segment. Empty means every branch. */
+  branch_filter: string[]
+  severity_threshold: SeverityThresholdWire
+  updated_at: string
+}
+
+/** `custom`: `.review/rules.md` was parsed; `missing`: no file; `invalid`: the file failed to parse. */
+export type RulesFileStatusWire = 'custom' | 'missing' | 'invalid'
+
+/** A review rule as parsed by the backend. */
+export interface RuleWire {
+  rule_id: string
+  title: string
+  description: string
+  category: string
+  severity: SeverityWire
+  enabled: boolean
+}
+
+export interface RulesProblemWire {
+  message: string
+  /** 1-based line in the rules file, or null when the problem has no single line. */
+  line: number | null
+}
+
+/** The rules in effect for a repository (proposed `GET /repositories/{id}/rules`). */
+export interface RepositoryRulesWire {
+  status: RulesFileStatusWire
+  /** Path of the rules file, `.review/rules.md`. */
+  path: string
+  /** The branch that was read: the default branch in v1. */
+  branch: string
+  /** Commit that was read; null when the file is missing. */
+  commit_sha: string | null
+  /** Absolute https web URL of the file; null when the file is missing. */
+  file_url: string | null
+  rules_version: string
+  /** Non-empty only when `status` is `invalid`. */
+  problems: RulesProblemWire[]
+  /** The rules in effect: the parsed custom rules, or the defaults. */
+  rules: RuleWire[]
+}

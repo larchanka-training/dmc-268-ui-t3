@@ -14,6 +14,7 @@ import {
   AppLayout,
   CallbackRoute,
   ConnectRepositoryRoute,
+  RepositorySettingsRoute,
   RootLayout,
   RunRoute,
   SettingsRoute,
@@ -32,7 +33,7 @@ export interface RouterContext {
  *   ├── /auth/callback       public, no shell
  *   └── app (pathless)       session gate + shell
  *       ├── /                redirect: ?run=<id> → /runs/<id>, else /repositories
- *       ├── /repositories, /repositories/connect
+ *       ├── /repositories, /repositories/connect, /repositories/$repositoryId/settings
  *       ├── /runs, /runs/$runId, /settings
  *       └── $                not found
  */
@@ -78,6 +79,13 @@ const connectRepositoryRoute = createRoute({
   component: ConnectRepositoryRoute,
 })
 
+const repositorySettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/repositories/$repositoryId/settings',
+  staticData: { title: 'Repository settings' },
+  component: RepositorySettingsRoute,
+})
+
 const runsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/runs',
@@ -113,6 +121,7 @@ const routeTree = rootRoute.addChildren([
     indexRoute,
     repositoriesRoute,
     connectRepositoryRoute,
+    repositorySettingsRoute,
     runsRoute,
     runRoute,
     settingsRoute,

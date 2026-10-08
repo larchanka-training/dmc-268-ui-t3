@@ -1,4 +1,5 @@
 export { reviewRunKeys, useReviewRun, useReviewRuns } from './api/queries'
+export { runsOfRepository } from './lib/filter'
 export { sortRunsNewestFirst } from './lib/sort'
 export {
   COVERAGE_STATUSES,

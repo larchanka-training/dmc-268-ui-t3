@@ -9,6 +9,7 @@ export {
   type PlacedBySide,
   type Placement,
 } from './lib/anchors'
+export { headLines, type HeadLinesRequest } from './lib/head-lines'
 export { parseUnifiedDiff } from './lib/parse-unified-diff'
 export {
   buildSplitRows,

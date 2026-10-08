@@ -1,15 +1,9 @@
 import { z } from 'zod'
+import { httpsUrl } from '@/shared/lib/https-url'
 
 export const VCS_PROVIDERS = ['github', 'gitlab'] as const
 
 const nonEmpty = z.string().trim().min(1)
-
-/** Only absolute https URLs reach an `href`; `javascript:` and other schemes fail validation. */
-const httpsUrl = z
-  .string()
-  .refine((value) => URL.canParse(value) && new URL(value).protocol === 'https:', {
-    message: 'must be an absolute https URL',
-  })
 
 const repositoryFields = {
   provider: z.enum(VCS_PROVIDERS),

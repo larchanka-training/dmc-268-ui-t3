@@ -1,19 +1,14 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { anchorBelongsToFile, filePath, useDiffViewActions, type DiffFile } from '@/entities/diff'
 import {
-  countBySeverity,
-  SEVERITIES,
-  SeverityBadge,
+  countByGroup,
+  SEVERITY_GROUPS,
+  SeverityGroupBadge,
   useFindingNavActions,
   useSelectedFindingId,
   type Finding,
 } from '@/entities/finding'
-import {
-  CoverageBadge,
-  PublicationBadge,
-  RunStatusBadge,
-  type ReviewRun,
-} from '@/entities/review-run'
+import type { ReviewRun } from '@/entities/review-run'
 import { Button } from '@/shared/ui/button'
 import { orderFindings } from '../lib/order-findings'
 
@@ -34,7 +29,7 @@ export function ReviewSummary({ run, files, findings }: ReviewSummaryProps) {
   const selectedId = useSelectedFindingId()
   const { selectFinding } = useFindingNavActions()
   const { setFileCollapsed } = useDiffViewActions()
-  const counts = countBySeverity(findings)
+  const counts = countByGroup(findings)
   const resolved = findings.filter((finding) => finding.status === 'resolved').length
   const ordered = orderFindings(files, findings)
   const position = ordered.findIndex((finding) => finding.id === selectedId)
@@ -50,17 +45,6 @@ export function ReviewSummary({ run, files, findings }: ReviewSummaryProps) {
 
   return (
     <section aria-label="Review summary" className="space-y-3 rounded-md border bg-card p-4">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-lg font-semibold">{run.title}</h1>
-        <span className="text-sm text-muted-foreground">
-          {run.repository} #{run.pullRequest} · <code>{run.headSha.slice(0, 7)}</code>
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <RunStatusBadge status={run.status} />
-        <CoverageBadge status={run.coverage.status} />
-        <PublicationBadge status={run.publication.status} />
-      </div>
       {coverageNote && (
         <div
           role="note"
@@ -78,10 +62,10 @@ export function ReviewSummary({ run, files, findings }: ReviewSummaryProps) {
       )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <ul aria-label="Findings by severity" className="flex flex-wrap gap-2">
-          {SEVERITIES.map((severity) => (
-            <li key={severity} className="flex items-center gap-1">
-              <SeverityBadge severity={severity} />
-              <span>{counts[severity]}</span>
+          {SEVERITY_GROUPS.map((group) => (
+            <li key={group} className="flex items-center gap-1">
+              <SeverityGroupBadge group={group} />
+              <span>{counts[group]}</span>
             </li>
           ))}
         </ul>

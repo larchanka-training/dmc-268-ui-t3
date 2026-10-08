@@ -15,6 +15,7 @@ const byId = (id: string): Finding => {
 describe('FindingCard', () => {
   it('shows all finding fields with a text severity label', () => {
     render(<FindingCard finding={byId('f-reflected-xss')} />)
+    expect(screen.getByText('Warning')).toHaveAttribute('data-severity-group', 'warning')
     expect(screen.getByText('High')).toHaveAttribute('data-severity', 'high')
     expect(
       screen.getByRole('heading', { name: 'Search term is reflected into HTML without escaping' }),
@@ -42,8 +43,40 @@ describe('FindingCard', () => {
     expect(screen.getByText(finding.evidence)).not.toBeVisible()
     await userEvent.click(screen.getByRole('button', { name: 'Show finding details' }))
     expect(screen.getByText(finding.evidence)).toBeVisible()
+    expect(screen.getByText('Warning')).toBeVisible()
     expect(screen.getByText('Medium')).toBeVisible()
     expect(screen.getByRole('list', { name: 'Replies' }).children).toHaveLength(2)
+  })
+
+  it.each([
+    ['f-sql-injection', 'Critical', 'Critical'],
+    ['f-locale-default', 'Info', 'Low'],
+  ])('shows %s as the %s group with its level', (id, group, level) => {
+    render(<FindingCard finding={byId(id)} />)
+    expect(screen.getAllByText(group)[0]).toHaveAttribute('data-severity-group')
+    expect(screen.getByText(level, { selector: '[data-severity]' })).toBeVisible()
+  })
+
+  it('starts an open finding expanded and collapses it with the toggle', async () => {
+    const finding = byId('f-sql-injection')
+    render(<FindingCard finding={finding} />)
+    const toggle = screen.getByRole('button', { name: 'Hide finding details' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText(finding.evidence)).toBeVisible()
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByText(finding.evidence)).not.toBeVisible()
+    expect(screen.getByRole('heading', { name: finding.title })).toBeVisible()
+  })
+
+  it('expands a collapsed card with Enter on the focused toggle', async () => {
+    const finding = byId('f-wildcard-hosts')
+    render(<FindingCard finding={finding} />)
+    const toggle = screen.getByRole('button', { name: 'Show finding details' })
+    toggle.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText(finding.evidence)).toBeVisible()
   })
 
   it('reports clicks on related changed lines', async () => {

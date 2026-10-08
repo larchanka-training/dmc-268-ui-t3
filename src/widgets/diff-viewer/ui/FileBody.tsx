@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from 'react'
+import { Fragment, useCallback, useMemo } from 'react'
 import {
   AttachmentRow,
   buildSplitRows,
@@ -7,6 +7,7 @@ import {
   filePath,
   gapKey,
   GapRow,
+  headLines,
   NO_EXPANSION,
   placeOnSplitRows,
   placeOnUnifiedRows,
@@ -26,7 +27,8 @@ import { sortBySeverity, useLineFlash, type Finding } from '@/entities/finding'
 import { ExpandContextControls } from '@/features/expand-context'
 import { cn } from '@/shared/lib/cn'
 import { anchorToken, type LineAnchor } from '@/shared/lib/line-anchor'
-import { FindingItem } from './FindingItem'
+import { FindingItem, type ResolveHeadLines } from './FindingItem'
+import { FlaggedLineMarker } from './FlaggedLineMarker'
 
 interface FileBodyProps {
   runId: string
@@ -53,6 +55,10 @@ export function FileBody({
   const flash = useLineFlash()
   const tokensFor = useDiffTokens(file, contentLines)
   const path = filePath(file)
+  const resolveHeadLines = useCallback<ResolveHeadLines>(
+    (start, end) => headLines({ file, contentLines, start, end }),
+    [file, contentLines],
+  )
 
   const expansionOf = useMemo(
     () =>
@@ -95,7 +101,13 @@ export function FileBody({
   const renderFindings = (placed: PlacedBySide<Finding> | undefined) => {
     if (!placed) return null
     const item = (finding: Finding) => (
-      <FindingItem key={finding.id} runId={runId} finding={finding} onRevealLine={onRevealLine} />
+      <FindingItem
+        key={finding.id}
+        runId={runId}
+        finding={finding}
+        onRevealLine={onRevealLine}
+        resolveHeadLines={resolveHeadLines}
+      />
     )
     if (view.mode === 'unified') {
       return (
@@ -119,6 +131,16 @@ export function FileBody({
       </AttachmentRow>
     )
   }
+
+  const unifiedMarker = (placed: PlacedBySide<Finding> | undefined) => {
+    const all = placed ? [...placed.LEFT, ...placed.RIGHT] : []
+    return all.length > 0 ? <FlaggedLineMarker findings={all} /> : null
+  }
+  const splitMarkers = (placed: PlacedBySide<Finding> | undefined) =>
+    placed && {
+      LEFT: placed.LEFT.length > 0 ? <FlaggedLineMarker findings={placed.LEFT} /> : null,
+      RIGHT: placed.RIGHT.length > 0 ? <FlaggedLineMarker findings={placed.RIGHT} /> : null,
+    }
 
   const paths = { oldPath: file.oldPath, newPath: file.newPath }
   const unplaced = sortBySeverity(view.placement.unplaced)
@@ -145,6 +167,7 @@ export function FileBody({
                     tokens={tokensFor(row.line)}
                     paths={paths}
                     flashed={isFlashed(rowAnchorTokens(paths, row.line, row.line))}
+                    marker={unifiedMarker(view.placement.byRow.get(row.key))}
                   />
                   {renderFindings(view.placement.byRow.get(row.key))}
                 </Fragment>
@@ -161,6 +184,7 @@ export function FileBody({
                     tokensFor={tokensFor}
                     paths={paths}
                     flashed={isFlashed(rowAnchorTokens(paths, row.left, row.right))}
+                    markers={splitMarkers(view.placement.byRow.get(row.key))}
                   />
                   {renderFindings(view.placement.byRow.get(row.key))}
                 </Fragment>
@@ -168,17 +192,30 @@ export function FileBody({
             )}
       </div>
       {unplaced.length > 0 && (
-        <UnplacedFindings runId={runId} findings={unplaced} onRevealLine={onRevealLine} />
+        <UnplacedFindings
+          runId={runId}
+          findings={unplaced}
+          onRevealLine={onRevealLine}
+          resolveHeadLines={resolveHeadLines}
+        />
       )}
     </>
   )
+}
+
+interface UnplacedFindingsProps {
+  runId: string
+  findings: Finding[]
+  onRevealLine: (anchor: LineAnchor) => void
+  resolveHeadLines?: ResolveHeadLines
 }
 
 export function UnplacedFindings({
   runId,
   findings,
   onRevealLine,
-}: Omit<FileBodyProps, 'file' | 'contentLines'>) {
+  resolveHeadLines,
+}: UnplacedFindingsProps) {
   return (
     <section aria-label="Unplaced findings" className="space-y-2 border-t bg-muted/40 p-3">
       <h3 className="text-sm font-semibold">Findings not on a shown line</h3>
@@ -186,7 +223,13 @@ export function UnplacedFindings({
         These findings point to lines that are not part of this diff or its available content.
       </p>
       {findings.map((finding) => (
-        <FindingItem key={finding.id} runId={runId} finding={finding} onRevealLine={onRevealLine} />
+        <FindingItem
+          key={finding.id}
+          runId={runId}
+          finding={finding}
+          onRevealLine={onRevealLine}
+          resolveHeadLines={resolveHeadLines}
+        />
       ))}
     </section>
   )

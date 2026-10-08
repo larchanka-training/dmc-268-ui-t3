@@ -10,7 +10,7 @@ Stack: React 18, TypeScript (strict), Vite, TanStack Router, TanStack Query, Zus
 flowchart TD
   app["app<br/>providers, route tree, session gate, global styles, entry"] --> pages
   pages["pages<br/>repositories, connect-repository, review-runs,<br/>review-run, settings, not-found, sign-in, auth-callback"] --> widgets
-  widgets["widgets<br/>app-shell, diff-viewer, review-summary"] --> features
+  widgets["widgets<br/>app-shell, diff-viewer, review-summary,<br/>pull-request-overview"] --> features
   features["features<br/>toggle-diff-view, expand-context, reply-to-finding,<br/>resolve-finding, auth-by-github, switch-theme, connect-repository"] --> entities
   entities["entities<br/>repository, review-run, diff, finding, session"] --> shared
   shared["shared<br/>api, lib, ui, config"]
@@ -28,7 +28,7 @@ app ──► pages ──► widgets ──► features ──► entities ─�
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `app`      | –                                                                                                                                   | Entry point, `QueryClient`, API adapter selection, route tree, session gate, theme tokens                                                        |
 | `pages`    | `repositories`, `connect-repository`, `review-runs`, `review-run`, `settings`, `not-found`, `sign-in`, `auth-callback`              | Screens: connected repositories, connecting one, the run list, a run with its loading / error / empty / partial states, settings, sign-in, OAuth |
-| `widgets`  | `app-shell`, `diff-viewer`, `review-summary`                                                                                        | Self-contained blocks that combine entities and features; `app-shell` is the signed-in frame                                                     |
+| `widgets`  | `app-shell`, `diff-viewer`, `review-summary`, `pull-request-overview`                                                               | Self-contained blocks that combine entities and features; `app-shell` is the signed-in frame                                                     |
 | `features` | `toggle-diff-view`, `expand-context`, `reply-to-finding`, `resolve-finding`, `auth-by-github`, `switch-theme`, `connect-repository` | One user action each: UI control + mutation or store update                                                                                      |
 | `entities` | `repository`, `review-run`, `diff`, `finding`, `session`                                                                            | Domain model: Zod schemas, query hooks, stores, pure logic, presentational atoms                                                                 |
 | `shared`   | segments `api`, `lib`, `ui`, `config`                                                                                               | Domain-free code: API boundaries, mock adapters, env config, PKCE, theme store, highlighter, shadcn                                              |
@@ -48,7 +48,7 @@ The rules are enforced by `no-restricted-imports` blocks generated per layer in 
 | A slice's `index.ts` re-exports only its own modules                 | `entities/finding/index.ts` → `export * from '../diff'`    |
 | `shared` has no slices, so its modules are imported directly         | allowed: `@/shared/ui/button`, `@/shared/lib/line-anchor`  |
 
-When two entities need the same type, it moves to `shared` (for example `LineAnchor` in `shared/lib/line-anchor.ts`). When an entity component needs a feature, it exposes a slot instead: `FindingCard` takes `actions` and `footer` props, and the `diff-viewer` widget passes the resolve and reply features into them.
+When two entities need the same type, it moves to `shared` (for example `LineAnchor` in `shared/lib/line-anchor.ts`). When an entity component needs a feature or another entity, it exposes a slot instead: `FindingCard` takes `actions`, `suggestion`, and `footer` props, and the `diff-viewer` widget passes the resolve and reply features and the `SuggestedChange` block into them. Likewise `UnifiedLineRow` / `SplitLineRow` take `marker` / `markers` slots, so `entities/diff` stays unaware of findings while the widget draws flagged-line markers in the gutter. Rules that combine entities (the verdict and score use the run and the findings) live in a widget (`widgets/pull-request-overview/lib/verdict.ts`) and take plain counts.
 
 ## Data flow and state
 
@@ -191,17 +191,17 @@ The user picks **Light**, **Dark**, or **System** (default). The CSS owns the th
 
 ## UI stack and design tokens
 
-- **Tailwind CSS v4** (`@tailwindcss/vite`). All colors are CSS variables on `:root` in `src/app/styles/index.css`, redefined for dark mode. Dark mode follows the OS unless `<html data-theme="light|dark">` overrides it. The variables are exposed to Tailwind through `@theme inline`, for example `bg-diff-add` and `text-severity-high`.
+- **Tailwind CSS v4** (`@tailwindcss/vite`). All colors are CSS variables on `:root` in `src/app/styles/index.css`, redefined for dark mode. Dark mode follows the OS unless `<html data-theme="light|dark">` overrides it. The variables are exposed to Tailwind through `@theme inline`, for example `bg-diff-add` and `text-severity-warning`.
 - **shadcn/ui** primitives (Radix) are generated into `src/shared/ui/` (`components.json`). The `cva` variant definitions live in `*-variants.ts` files, so component files stay fast-refresh friendly.
 - **Shiki** (core + JavaScript regex engine, lazy-loaded). Tokens are rendered as React `<span>` elements carrying `--shiki-light` and `--shiki-dark` variables. Nothing is ever injected as HTML.
 
-| Token group | Variables                                                                                                    |
-| ----------- | ------------------------------------------------------------------------------------------------------------ |
-| Surfaces    | `--background`, `--foreground`, `--card`, `--muted`, `--muted-foreground`, `--border`, `--ring`, …           |
-| Diff        | `--diff-add-bg`, `--diff-add-gutter`, `--diff-del-bg`, `--diff-del-gutter`, `--diff-ctx-bg`, `--diff-gap-bg` |
-|             | `--diff-gap-fg`, `--diff-filler-bg`, `--diff-highlight`, `--diff-add-fg`, `--diff-del-fg`                    |
-| Severity    | `--severity-{critical,high,medium,low}` (text) and `--severity-*-bg`; every pair has contrast ≥ 4.5:1        |
-| Code        | `--font-mono`, `--leading-code` (20px)                                                                       |
+| Token group | Variables                                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| Surfaces    | `--background`, `--foreground`, `--card`, `--muted`, `--muted-foreground`, `--border`, `--ring`, …              |
+| Diff        | `--diff-add-bg`, `--diff-add-gutter`, `--diff-del-bg`, `--diff-del-gutter`, `--diff-ctx-bg`, `--diff-gap-bg`    |
+|             | `--diff-gap-fg`, `--diff-filler-bg`, `--diff-highlight`, `--diff-add-fg`, `--diff-del-fg`                       |
+| Severity    | `--severity-{critical,warning,info}` (text) and `--severity-*-bg`, one pair per display group; contrast ≥ 4.5:1 |
+| Code        | `--font-mono`, `--leading-code` (20px)                                                                          |
 
 ## Components
 
@@ -212,13 +212,16 @@ The user picks **Light**, **Dark**, or **System** (default). The CSS owns the th
 | `buildUnifiedRows`, `buildSplitRows`       | `entities/diff`                        | Pure row models for both layouts, including collapsed gaps and revealed context lines                                                                                                 |
 | `expansionsForAnchors`, `placeOn*Rows`     | `entities/diff`                        | Reveal anchored lines hidden in gaps; attach findings to rows; collect unplaced findings                                                                                              |
 | `UnifiedLineRow`, `SplitLineRow`, `GapRow` | `entities/diff`                        | Row atoms with gutters, `+`/`-` markers, a screen-reader change-type label, `data-anchors` for navigation                                                                             |
-| `FindingCard`, `SeverityBadge`             | `entities/finding`                     | Finding with severity label, rule, evidence, impact, recommendation, confidence, related lines, replies                                                                               |
+| `FindingCard`, `SeverityBadge`             | `entities/finding`                     | Expandable finding: Critical / Warning / Info badge plus the level as text, rule, evidence, impact, recommendation, suggestion slot, confidence, related lines, replies               |
+| `SuggestedChange`                          | `entities/finding`                     | AI-suggested replacement as a highlighted −/+ mini diff, "not applied" label, "Copy suggestion"; replacement-only when the original lines are unknown                                 |
+| `headLines`                                | `entities/diff`                        | Head-side text of a line range from the file content, falling back to the diff's RIGHT lines; `null` when any line is unknown                                                         |
 | `DiffViewModeToggle`                       | `features/toggle-diff-view`            | Unified / split switch for all files                                                                                                                                                  |
 | `ExpandContextControls`                    | `features/expand-context`              | "Expand 20 lines" / "Expand all"; explains when the file content is unavailable                                                                                                       |
 | `ReplyForm`                                | `features/reply-to-finding`            | Reply input, blank replies rejected, draft kept on failure                                                                                                                            |
 | `ResolveFindingToggle`                     | `features/resolve-finding`             | Resolve / unresolve with optimistic update and rollback                                                                                                                               |
-| `DiffViewer`                               | `widgets/diff-viewer`                  | Files with headers, collapsible bodies, inline findings, unplaced findings, scroll-to-line navigation                                                                                 |
-| `ReviewSummary`                            | `widgets/review-summary`               | Run, coverage, and publication badges, coverage limitations, counts, next/previous finding                                                                                            |
+| `DiffViewer`                               | `widgets/diff-viewer`                  | Files with headers, collapsible bodies, inline findings with suggested changes, flagged-line gutter markers (`FlaggedLineMarker`), unplaced findings, scroll-to-line navigation       |
+| `PullRequestOverview`                      | `widgets/pull-request-overview`        | Page heading (PR title), repository and number, short SHA, author, `base ← head`, provider link, run / coverage / publication badges, derived verdict and heuristic score             |
+| `ReviewSummary`                            | `widgets/review-summary`               | Coverage limitations, Critical / Warning / Info counts, resolved / unresolved counts, next/previous finding                                                                           |
 | `ReviewRunPage`                            | `pages/review-run`                     | Loading, error with retry, in-progress, "no issues" (complete coverage only), composed view                                                                                           |
 | `SignInButton`, `UserMenu`                 | `features/auth-by-github`              | "Sign in with GitHub" with a redirecting state; avatar, login, and sign-out                                                                                                           |
 | `SignInPage`, `AuthCallbackPage`           | `pages/sign-in`, `pages/auth-callback` | Sign-in, "session expired", configuration errors; "Signing you in…" and cancelled / unverified / failed with "Try again"                                                              |
@@ -233,6 +236,14 @@ The user picks **Light**, **Dark**, or **System** (default). The CSS owns the th
 | `ConnectRepositoryPage`                    | `pages/connect-repository`             | Accessible repositories with a name filter, "Connect" or "Connected" per row, the optional GitHub App installation link; loading, empty, and error with retry                         |
 
 Accessibility: all controls are native buttons with accessible names, so they work with Tab and Enter. Every diff line has a visually hidden "Added line" / "Removed line" / "Unchanged line" label. Severity is always shown as text as well as color.
+
+## Review run screen
+
+`/runs/$runId` composes `PullRequestOverview`, `ReviewSummary`, the run-state notice, and `DiffViewer`.
+
+- **Severity display groups.** The wire contract keeps four levels (`critical`, `high`, `medium`, `low`), and validation and ordering use them. The UI shows three groups: Critical (`critical`), Warning (`high`, `medium`), and Info (`low`). Cards also show the level as text (`entities/finding/lib/severity.ts`).
+- **Verdict and score** are derived on the client (`widgets/pull-request-overview/lib/verdict.ts`). The verdict is, in order: "Review in progress" (NEW / QUEUED / RUNNING), "No verdict" (FAILED, CANCELLED, or failed coverage), "Changes requested" (any Critical), "Needs attention" (any Warning), "Partially reviewed" (partial coverage), then "No blocking issues". The score is `100 − 25·critical − 8·high − 4·medium − 1·low`, floored at 0, and shown only for a completed run with complete coverage. Both count all findings, because resolving is UI-only and proves no fix.
+- **Proposed wire fields (not an approved contract).** `ReviewRunWire` gets optional `author` (`{ login, avatar_url }`), `base_branch`, `head_branch`, and `pull_request_url`. `FindingWire` gets optional `suggested_change` (`{ start_line, end_line, replacement }`): head-side lines of the anchor file, never on a LEFT anchor, and an empty replacement means removal. URLs must be absolute `https` (`shared/lib/https-url.ts`), otherwise the run fails validation. Payloads without these fields still validate, and the UI leaves out what it has no data for.
 
 ## Testing
 
@@ -394,6 +405,10 @@ export const mockAppState: MockAppState = {
       head_sha: '6c10b7f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4',
       rules_version: 'rules-2026-10-01',
       created_at: '2026-10-07T09:12:00Z',
+      author: { login: 'octocat', avatar_url: 'https://avatars.githubusercontent.com/u/583231' },
+      base_branch: 'main',
+      head_branch: 'feature/user-search',
+      pull_request_url: 'https://github.com/larchanka-training/dmc-268-demo/pull/42',
     },
     diffText,
     findings: [
@@ -464,6 +479,11 @@ export const mockAppState: MockAppState = {
         confidence: 0.9,
         status: 'open',
         replies: [],
+        suggested_change: {
+          start_line: 7,
+          end_line: 7,
+          replacement: '  res.json({ term, users: users.map((u) => u.name) })',
+        },
       },
       {
         finding_id: 'f-debug-enabled',
@@ -478,6 +498,11 @@ export const mockAppState: MockAppState = {
         confidence: 0.88,
         status: 'open',
         replies: [],
+        suggested_change: {
+          start_line: 35,
+          end_line: 35,
+          replacement: "DEBUG = os.environ.get('DEBUG', 'False') == 'True'",
+        },
       },
       {
         finding_id: 'f-wildcard-hosts',
@@ -505,6 +530,11 @@ export const mockAppState: MockAppState = {
             created_at: '2026-10-07T09:31:00Z',
           },
         ],
+        suggested_change: {
+          start_line: 36,
+          end_line: 36,
+          replacement: "ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'example.com').split(',')",
+        },
       },
       {
         finding_id: 'f-locale-default',

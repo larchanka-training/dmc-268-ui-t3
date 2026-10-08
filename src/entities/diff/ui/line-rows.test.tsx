@@ -32,6 +32,40 @@ describe('UnifiedLineRow', () => {
   })
 })
 
+describe('line markers', () => {
+  const marker = <button type="button">flag</button>
+  const cells = () => screen.getAllByRole('cell')
+
+  it('puts a unified marker in the new-number gutter of an added line', () => {
+    render(
+      <UnifiedLineRow line={add} tokens={null} paths={paths} flashed={false} marker={marker} />,
+    )
+    expect(cells()[1]).toContainElement(screen.getByRole('button', { name: 'flag' }))
+  })
+
+  it('puts a unified marker in the old-number gutter of a removed line', () => {
+    render(
+      <UnifiedLineRow line={del} tokens={null} paths={paths} flashed={false} marker={marker} />,
+    )
+    expect(cells()[0]).toContainElement(screen.getByRole('button', { name: 'flag' }))
+  })
+
+  it('puts split markers in the gutter of their side', () => {
+    render(
+      <SplitLineRow
+        left={del}
+        right={add}
+        tokensFor={() => null}
+        paths={paths}
+        flashed={false}
+        markers={{ RIGHT: marker }}
+      />,
+    )
+    expect(cells()[2]).toContainElement(screen.getByRole('button', { name: 'flag' }))
+    expect(cells()[0]).not.toContainElement(screen.getByRole('button', { name: 'flag' }))
+  })
+})
+
 describe('SplitLineRow', () => {
   it('renders an empty filler cell when one side has no line', () => {
     render(

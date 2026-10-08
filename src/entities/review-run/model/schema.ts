@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { httpsUrl } from '@/shared/lib/https-url'
 
 export const RUN_STATUSES = [
   'NEW',
@@ -31,6 +32,10 @@ export const reviewRunSchema = z
     head_sha: sha,
     rules_version: nonEmpty,
     created_at: z.iso.datetime(),
+    author: z.object({ login: nonEmpty, avatar_url: httpsUrl.nullable() }).nullish(),
+    base_branch: nonEmpty.nullish(),
+    head_branch: nonEmpty.nullish(),
+    pull_request_url: httpsUrl.nullish(),
   })
   .transform((wire) => ({
     id: wire.run_id,
@@ -44,6 +49,10 @@ export const reviewRunSchema = z
     headSha: wire.head_sha,
     rulesVersion: wire.rules_version,
     createdAt: wire.created_at,
+    author: wire.author ? { login: wire.author.login, avatarUrl: wire.author.avatar_url } : null,
+    baseBranch: wire.base_branch ?? null,
+    headBranch: wire.head_branch ?? null,
+    pullRequestUrl: wire.pull_request_url ?? null,
   }))
 
 /** Validates a ReviewRunWire[] payload (the run list). */
@@ -53,3 +62,4 @@ export type ReviewRun = z.output<typeof reviewRunSchema>
 export type RunStatus = ReviewRun['status']
 export type CoverageStatus = ReviewRun['coverage']['status']
 export type PublicationStatus = ReviewRun['publication']['status']
+export type PullRequestAuthor = NonNullable<ReviewRun['author']>

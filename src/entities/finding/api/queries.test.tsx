@@ -33,4 +33,18 @@ describe('useFindings', () => {
     })
     expect(result.current.data).toBeUndefined()
   })
+
+  it('rejects the whole list when a suggested change has an inverted range', async () => {
+    const [first, ...rest] = mockAppState.server.findings
+    const suggested_change = { start_line: 40, end_line: 38, replacement: 'x' }
+    const api: ReviewApi = {
+      ...createMockReviewApi(),
+      getFindings: () => Promise.resolve([{ ...first, suggested_change }, ...rest]),
+    }
+    const { result } = renderHook(() => useFindings(RUN_ID), { wrapper: createWrapper({ api }) })
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+    expect(result.current.data).toBeUndefined()
+  })
 })

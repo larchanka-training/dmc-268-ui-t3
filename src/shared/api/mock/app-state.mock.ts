@@ -142,6 +142,10 @@ export const mockAppState: MockAppState = {
       head_sha: '6c10b7f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4',
       rules_version: 'rules-2026-10-01',
       created_at: '2026-10-07T09:12:00Z',
+      author: { login: 'octocat', avatar_url: 'https://avatars.githubusercontent.com/u/583231' },
+      base_branch: 'main',
+      head_branch: 'feature/user-search',
+      pull_request_url: 'https://github.com/larchanka-training/dmc-268-demo/pull/42',
     },
     diffText,
     findings: [
@@ -212,6 +216,11 @@ export const mockAppState: MockAppState = {
         confidence: 0.9,
         status: 'open',
         replies: [],
+        suggested_change: {
+          start_line: 7,
+          end_line: 7,
+          replacement: '  res.json({ term, users: users.map((u) => u.name) })',
+        },
       },
       {
         finding_id: 'f-debug-enabled',
@@ -226,6 +235,11 @@ export const mockAppState: MockAppState = {
         confidence: 0.88,
         status: 'open',
         replies: [],
+        suggested_change: {
+          start_line: 35,
+          end_line: 35,
+          replacement: "DEBUG = os.environ.get('DEBUG', 'False') == 'True'",
+        },
       },
       {
         finding_id: 'f-wildcard-hosts',
@@ -253,6 +267,11 @@ export const mockAppState: MockAppState = {
             created_at: '2026-10-07T09:31:00Z',
           },
         ],
+        suggested_change: {
+          start_line: 36,
+          end_line: 36,
+          replacement: "ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'example.com').split(',')",
+        },
       },
       {
         finding_id: 'f-locale-default',

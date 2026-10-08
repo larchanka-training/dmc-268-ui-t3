@@ -8,6 +8,7 @@ export {
   reviewRunSchema,
   type CoverageStatus,
   type PublicationStatus,
+  type PullRequestAuthor,
   type ReviewRun,
   type RunStatus,
 } from './model/schema'

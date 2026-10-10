@@ -1,4 +1,9 @@
-export { repositoryKeys, useAvailableRepositories, useRepositories } from './api/queries'
+export {
+  repositoryKeys,
+  useAvailableRepositories,
+  useRepositories,
+  useRepository,
+} from './api/queries'
 export { PROVIDER_LABEL } from './lib/labels'
 export { sortByFullName } from './lib/sort'
 export {

@@ -2,6 +2,7 @@ import { getRouteApi, Outlet, useNavigate, useRouter } from '@tanstack/react-rou
 import { useEffect } from 'react'
 import { AuthCallbackPage } from '@/pages/auth-callback'
 import { ConnectRepositoryPage } from '@/pages/connect-repository'
+import { RepositorySettingsPage } from '@/pages/repository-settings'
 import { ReviewRunPage } from '@/pages/review-run'
 import { SettingsPage } from '@/pages/settings'
 import { SignInPage } from '@/pages/sign-in'
@@ -13,6 +14,7 @@ import { SessionGate } from './SessionGate'
 
 const rootRouteApi = getRouteApi('__root__')
 const runRouteApi = getRouteApi('/app/runs/$runId')
+const repositorySettingsRouteApi = getRouteApi('/app/repositories/$repositoryId/settings')
 
 const APP_NAME = 'AI code review'
 
@@ -58,6 +60,11 @@ export function ConnectRepositoryRoute() {
       onConnected={() => void navigate({ to: '/repositories' })}
     />
   )
+}
+
+export function RepositorySettingsRoute() {
+  const { repositoryId } = repositorySettingsRouteApi.useParams()
+  return <RepositorySettingsPage repositoryId={repositoryId} />
 }
 
 export function SettingsRoute() {

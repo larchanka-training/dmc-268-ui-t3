@@ -59,6 +59,19 @@ describe('RepositoriesPage', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  it('links each repository to its settings page', async () => {
+    await renderWithRouter(<RepositoriesPage />, {
+      api: apiWith(() => Promise.resolve([web, infra])),
+    })
+    expect(await screen.findByRole('link', { name: 'Settings for acme/web' })).toHaveAttribute(
+      'href',
+      '/repositories/repo-1/settings',
+    )
+    expect(
+      screen.getByRole('link', { name: 'Settings for acme-group/platform/infra' }),
+    ).toHaveAttribute('href', '/repositories/repo-3/settings')
+  })
+
   it('offers "Connect repository" next to a non-empty list', async () => {
     await renderWithRouter(<RepositoriesPage />, { api: apiWith(() => Promise.resolve([web])) })
     await screen.findByRole('list', { name: 'Connected repositories' })

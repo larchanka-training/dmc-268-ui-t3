@@ -27,7 +27,7 @@ Signed-in screens SHALL render inside a shell with three regions: a sidebar hold
 
 ### Requirement: Primary navigation
 
-The sidebar SHALL list the destinations "Repositories" (`/repositories`), "Review runs" (`/runs`) and "Settings" (`/settings`), in that order. The item for the current location MUST be marked as the current page. While a run is open, the sidebar MUST show that run as a nested item under "Review runs". While the connect screen is open, "Repositories" MUST be shown as the active section.
+The sidebar SHALL list the destinations "Repositories" (`/repositories`), "Review runs" (`/runs`) and "Settings" (`/settings`), in that order. The item for the current location MUST be marked as the current page. While a run is open, the sidebar MUST show that run as a nested item under "Review runs". While the connect screen or a repository settings page is open, "Repositories" MUST be shown as the active section.
 
 #### Scenario: Active item
 
@@ -43,6 +43,11 @@ The sidebar SHALL list the destinations "Repositories" (`/repositories`), "Revie
 
 - **WHEN** the user is on `/repositories/connect`
 - **THEN** "Repositories" is shown as the active section, and no navigation link has `aria-current="page"`
+
+#### Scenario: Repository settings under Repositories
+
+- **WHEN** the user is on `/repositories/repo-1/settings`
+- **THEN** "Repositories" is shown as the active section, "Settings" is not marked as active, and no navigation link has `aria-current="page"`
 
 #### Scenario: Open run under Review runs
 
@@ -70,7 +75,7 @@ On wide viewports, the sidebar SHALL be visible and collapsible to an icon-only 
 
 ### Requirement: Routes
 
-The application SHALL serve these routes: `/` (redirects to `/repositories`), `/repositories`, `/repositories/connect`, `/runs`, `/runs/$runId`, `/settings`, and `/auth/callback`. Any other path MUST show a not-found page inside the shell with a link to `/runs`. Route changes MUST update the document title.
+The application SHALL serve these routes: `/` (redirects to `/repositories`), `/repositories`, `/repositories/connect`, `/repositories/$repositoryId/settings`, `/runs`, `/runs/$runId`, `/settings`, and `/auth/callback`. Any other path MUST show a not-found page inside the shell with a link to `/runs`. Route changes MUST update the document title.
 
 #### Scenario: Root redirect
 
@@ -96,6 +101,16 @@ The application SHALL serve these routes: `/` (redirects to `/repositories`), `/
 
 - **WHEN** the user opens `/repositories` and then `/repositories/connect`
 - **THEN** the document title is first "Repositories · AI code review" and then "Connect repository · AI code review"
+
+#### Scenario: Repository settings title
+
+- **WHEN** the user opens `/repositories/repo-1/settings`
+- **THEN** the document title is "Repository settings · AI code review"
+
+#### Scenario: Repository settings deep link after sign-in
+
+- **WHEN** a signed-out user opens `/repositories/repo-1/settings` and signs in successfully
+- **THEN** after the callback the user lands on `/repositories/repo-1/settings`
 
 ### Requirement: Legacy run links
 

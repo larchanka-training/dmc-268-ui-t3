@@ -53,6 +53,7 @@ describe('ConnectRepositoryPage', () => {
       'acme/docs',
       'acme/mobile-app',
       'acme/web',
+      'larchanka-training/dmc-268-demo',
       'octocat/dotfiles',
     ])
     expect(within(row('acme/web')).getByText('Connected')).toBeInTheDocument()
@@ -83,7 +84,7 @@ describe('ConnectRepositoryPage', () => {
     expect(screen.queryByRole('list', { name: 'Accessible repositories' })).toBeNull()
 
     await userEvent.clear(filter)
-    expect(rowNames()).toHaveLength(6)
+    expect(rowNames()).toHaveLength(7)
   })
 
   it('calls onConnected after a repository is connected', async () => {

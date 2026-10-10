@@ -88,6 +88,7 @@ function OpenRunItem({ runId, collapsed }: { runId: string; collapsed: boolean }
 /** The primary navigation list, shared by the desktop sidebar and the mobile drawer. */
 export function NavList({ collapsed = false }: { collapsed?: boolean }) {
   const matchRoute = useMatchRoute()
+  // Fuzzy: also the connect screen and repository settings pages.
   const inRepositories = Boolean(matchRoute({ to: '/repositories', fuzzy: true }))
   const inRuns = Boolean(matchRoute({ to: '/runs', fuzzy: true }))
   const openRun = matchRoute({ to: '/runs/$runId' })

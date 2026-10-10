@@ -118,4 +118,32 @@ describe('ReviewRunPage', () => {
     })
     expect(within(card).getByRole('textbox', { name: 'Reply' })).toHaveValue('half-written note')
   })
+
+  it('opens with the pull request header and its verdict', async () => {
+    renderPage()
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(run.title)
+    const overview = screen.getByRole('region', { name: 'Pull request' })
+    expect(within(overview).getByText('Changes requested')).toBeVisible()
+    expect(within(overview).getByText('Run: Completed')).toBeVisible()
+  })
+
+  it('treats an unsafe pull request URL as an error with a retry', async () => {
+    renderPage(withState({ run: { ...run, pull_request_url: 'javascript:alert(1)' } }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('unexpected format')
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible()
+    expect(screen.queryByRole('link', { name: /View pull request/ })).toBeNull()
+  })
+
+  it('keeps the verdict when the only critical finding is resolved', async () => {
+    renderPage()
+    const card = await screen.findByRole('article', {
+      name: 'Finding: User input is interpolated into a SQL query',
+    })
+    await userEvent.click(within(card).getByRole('button', { name: 'Resolve' }))
+    await waitFor(() => {
+      expect(card).toHaveAttribute('data-status', 'resolved')
+    })
+    const overview = screen.getByRole('region', { name: 'Pull request' })
+    expect(within(overview).getByText('Changes requested')).toBeVisible()
+  })
 })

@@ -31,9 +31,19 @@ const codeClass = 'whitespace-pre-wrap break-all pr-4'
 export const UNIFIED_COLUMNS = 'grid-cols-[3.5rem_3.5rem_minmax(0,1fr)]'
 export const SPLIT_COLUMNS = 'grid-cols-[3.5rem_minmax(0,1fr)_3.5rem_minmax(0,1fr)]'
 
-function LineNumber({ value, kind }: { value: number | null; kind: LineKind }) {
+interface LineNumberProps {
+  value: number | null
+  kind: LineKind
+  /** Optional control at the cell's leading edge (e.g. a flagged-line marker). */
+  marker?: ReactNode
+}
+
+function LineNumber({ value, kind, marker }: LineNumberProps) {
   return (
-    <div role="cell" className={cn(gutterClass, GUTTER_BG[kind])}>
+    <div role="cell" className={cn(gutterClass, GUTTER_BG[kind], marker != null && 'relative')}>
+      {marker != null && (
+        <span className="absolute inset-y-0 left-0 flex items-center">{marker}</span>
+      )}
       {value}
     </div>
   )
@@ -70,9 +80,11 @@ interface UnifiedLineRowProps {
   tokens: HighlightedLine | null
   paths: FilePaths
   flashed: boolean
+  /** Shown in the new-number gutter, or the old-number gutter for a removed line. */
+  marker?: ReactNode
 }
 
-export function UnifiedLineRow({ line, tokens, paths, flashed }: UnifiedLineRowProps) {
+export function UnifiedLineRow({ line, tokens, paths, flashed, marker }: UnifiedLineRowProps) {
   return (
     <div
       role="row"
@@ -84,8 +96,16 @@ export function UnifiedLineRow({ line, tokens, paths, flashed }: UnifiedLineRowP
         flashed && 'outline-2 -outline-offset-2 outline-ring',
       )}
     >
-      <LineNumber value={line.oldNo} kind={line.kind} />
-      <LineNumber value={line.newNo} kind={line.kind} />
+      <LineNumber
+        value={line.oldNo}
+        kind={line.kind}
+        marker={line.kind === 'del' ? marker : null}
+      />
+      <LineNumber
+        value={line.newNo}
+        kind={line.kind}
+        marker={line.kind === 'del' ? null : marker}
+      />
       <CodeCell line={line} tokens={tokens} />
     </div>
   )
@@ -97,9 +117,18 @@ interface SplitLineRowProps {
   tokensFor: (line: DiffLine) => HighlightedLine | null
   paths: FilePaths
   flashed: boolean
+  /** Per-side markers shown in that side's line-number gutter. */
+  markers?: { LEFT?: ReactNode; RIGHT?: ReactNode }
 }
 
-export function SplitLineRow({ left, right, tokensFor, paths, flashed }: SplitLineRowProps) {
+export function SplitLineRow({
+  left,
+  right,
+  tokensFor,
+  paths,
+  flashed,
+  markers,
+}: SplitLineRowProps) {
   return (
     <div
       role="row"
@@ -112,7 +141,7 @@ export function SplitLineRow({ left, right, tokensFor, paths, flashed }: SplitLi
     >
       {left ? (
         <>
-          <LineNumber value={left.oldNo} kind={left.kind} />
+          <LineNumber value={left.oldNo} kind={left.kind} marker={markers?.LEFT} />
           <CodeCell line={left} tokens={tokensFor(left)} />
         </>
       ) : (
@@ -120,7 +149,7 @@ export function SplitLineRow({ left, right, tokensFor, paths, flashed }: SplitLi
       )}
       {right ? (
         <>
-          <LineNumber value={right.newNo} kind={right.kind} />
+          <LineNumber value={right.newNo} kind={right.kind} marker={markers?.RIGHT} />
           <CodeCell line={right} tokens={tokensFor(right)} />
         </>
       ) : (

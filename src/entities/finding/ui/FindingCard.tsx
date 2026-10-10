@@ -4,6 +4,7 @@ import { cn } from '@/shared/lib/cn'
 import type { LineAnchor } from '@/shared/lib/line-anchor'
 import { Button } from '@/shared/ui/button'
 import { findingElementId } from '../lib/dom'
+import { SEVERITY_LABEL } from '../lib/severity'
 import type { Finding } from '../model/schema'
 import { ReplyThread } from './ReplyThread'
 import { SeverityBadge } from './SeverityBadge'
@@ -12,6 +13,8 @@ interface FindingCardProps {
   finding: Finding
   /** Controls in the card header (e.g. resolve toggle). */
   actions?: ReactNode
+  /** Content below the recommendation (e.g. the suggested change block). */
+  suggestion?: ReactNode
   /** Content below the replies (e.g. reply form). */
   footer?: ReactNode
   selected?: boolean
@@ -36,6 +39,7 @@ function Section({ label, children }: { label: string; children: string }) {
 export function FindingCard({
   finding,
   actions,
+  suggestion,
   footer,
   selected = false,
   onRelatedLineClick,
@@ -83,6 +87,10 @@ export function FindingCard({
             Resolved
           </span>
         )}
+        <span className="sr-only">Severity level:</span>
+        <span data-severity={finding.severity} className="text-xs text-muted-foreground">
+          {SEVERITY_LABEL[finding.severity]}
+        </span>
         <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
           {finding.ruleId}
         </code>
@@ -95,6 +103,7 @@ export function FindingCard({
           <Section label="Impact">{finding.impact}</Section>
           <Section label="Recommendation">{finding.recommendation}</Section>
         </dl>
+        {suggestion}
         <p className="text-xs text-muted-foreground">
           Confidence {Math.round(finding.confidence * 100)}%{' '}
           <span>(model estimate, not proof)</span>

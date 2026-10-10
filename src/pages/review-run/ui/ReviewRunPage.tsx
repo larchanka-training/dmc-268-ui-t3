@@ -4,6 +4,7 @@ import { useFindingNavActions, useFindings } from '@/entities/finding'
 import { useReviewRun, type ReviewRun } from '@/entities/review-run'
 import { Button } from '@/shared/ui/button'
 import { DiffViewer } from '@/widgets/diff-viewer'
+import { PullRequestOverview } from '@/widgets/pull-request-overview'
 import { ReviewSummary } from '@/widgets/review-summary'
 import { describeError } from '../lib/describe-error'
 
@@ -67,6 +68,7 @@ export function ReviewRunPage({ runId }: { runId: string }) {
 
   return (
     <div className="space-y-4">
+      <PullRequestOverview run={run.data} findings={findings.data} />
       <ReviewSummary run={run.data} files={diff.data} findings={findings.data} />
       <RunStateNotice run={run.data} findingCount={findings.data.length} />
       <DiffViewer runId={runId} files={diff.data} findings={findings.data} />

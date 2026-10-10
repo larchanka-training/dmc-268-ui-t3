@@ -1,5 +1,15 @@
 export { findingKeys, useFindings } from './api/queries'
-export { countBySeverity, SEVERITY_LABEL, sortBySeverity } from './lib/severity'
+export {
+  countByGroup,
+  countBySeverity,
+  GROUP_LABEL,
+  highestGroup,
+  SEVERITY_GROUPS,
+  SEVERITY_LABEL,
+  severityGroup,
+  sortBySeverity,
+  type SeverityGroup,
+} from './lib/severity'
 export {
   findingNavStore,
   useFindingNavActions,
@@ -14,12 +24,15 @@ export {
   findingListSchema,
   findingSchema,
   replySchema,
+  suggestedChangeSchema,
   type Finding,
   type FindingStatus,
   type Reply,
   type Severity,
+  type SuggestedChangeData,
 } from './model/schema'
 export { FindingCard } from './ui/FindingCard'
 export { findingElementId } from './lib/dom'
 export { ReplyThread } from './ui/ReplyThread'
-export { SeverityBadge } from './ui/SeverityBadge'
+export { SeverityBadge, SeverityGroupBadge } from './ui/SeverityBadge'
+export { SuggestedChange } from './ui/SuggestedChange'

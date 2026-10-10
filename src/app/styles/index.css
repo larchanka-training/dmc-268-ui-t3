@@ -19,6 +19,9 @@
 }
 
 :root {
+  /* Native scrollbars and form controls follow the active theme. */
+  color-scheme: light;
+
   /* Surfaces (shadcn names) */
   --background: #fff;
   --foreground: #1f2328;
@@ -53,19 +56,19 @@
   --diff-add-fg: #1a7f37;
   --diff-del-fg: #cf222e;
 
-  /* Severity: text color + tinted background */
+  /* Severity display groups (critical / warning / info): text color + tinted background */
   --severity-critical: #9f1239;
   --severity-critical-bg: #ffe4e6;
-  --severity-high: #9a3412;
-  --severity-high-bg: #ffedd5;
-  --severity-medium: #854d0e;
-  --severity-medium-bg: #fef9c3;
-  --severity-low: #1e40af;
-  --severity-low-bg: #dbeafe;
+  --severity-warning: #854d0e;
+  --severity-warning-bg: #fef9c3;
+  --severity-info: #1e40af;
+  --severity-info-bg: #dbeafe;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    color-scheme: dark;
+
     --background: #0d1117;
     --foreground: #e6edf3;
     --card: #151b23;
@@ -97,16 +100,16 @@
     --diff-del-fg: #f85149;
     --severity-critical: #fecdd3;
     --severity-critical-bg: #4c0519;
-    --severity-high: #fed7aa;
-    --severity-high-bg: #431407;
-    --severity-medium: #fef08a;
-    --severity-medium-bg: #422006;
-    --severity-low: #bfdbfe;
-    --severity-low-bg: #172554;
+    --severity-warning: #fef08a;
+    --severity-warning-bg: #422006;
+    --severity-info: #bfdbfe;
+    --severity-info-bg: #172554;
   }
 }
 
 :root[data-theme='dark'] {
+  color-scheme: dark;
+
   --background: #0d1117;
   --foreground: #e6edf3;
   --card: #151b23;
@@ -138,12 +141,10 @@
   --diff-del-fg: #f85149;
   --severity-critical: #fecdd3;
   --severity-critical-bg: #4c0519;
-  --severity-high: #fed7aa;
-  --severity-high-bg: #431407;
-  --severity-medium: #fef08a;
-  --severity-medium-bg: #422006;
-  --severity-low: #bfdbfe;
-  --severity-low-bg: #172554;
+  --severity-warning: #fef08a;
+  --severity-warning-bg: #422006;
+  --severity-info: #bfdbfe;
+  --severity-info-bg: #172554;
 }
 
 @theme inline {
@@ -182,12 +183,10 @@
   --color-diff-del-foreground: var(--diff-del-fg);
   --color-severity-critical: var(--severity-critical);
   --color-severity-critical-bg: var(--severity-critical-bg);
-  --color-severity-high: var(--severity-high);
-  --color-severity-high-bg: var(--severity-high-bg);
-  --color-severity-medium: var(--severity-medium);
-  --color-severity-medium-bg: var(--severity-medium-bg);
-  --color-severity-low: var(--severity-low);
-  --color-severity-low-bg: var(--severity-low-bg);
+  --color-severity-warning: var(--severity-warning);
+  --color-severity-warning-bg: var(--severity-warning-bg);
+  --color-severity-info: var(--severity-info);
+  --color-severity-info-bg: var(--severity-info-bg);
   --font-mono:
     ui-monospace, sfmono-regular, 'SF Mono', menlo, consolas, 'Liberation Mono', monospace;
   --leading-code: 20px;

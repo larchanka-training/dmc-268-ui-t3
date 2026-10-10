@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ApiError } from '../review-api'
 import { mockAppState, RUN_ID } from './app-state.mock'
 import { createMockReviewApi, failuresFromSearch } from './mock-review-api'
+import { mockRepositoryState } from './repositories.mock'
 
 describe('createMockReviewApi', () => {
   it('returns the fixture data', async () => {
@@ -12,6 +13,16 @@ describe('createMockReviewApi', () => {
     await expect(
       api.getFileContent({ runId: RUN_ID, path: 'config/settings.py' }),
     ).resolves.toBeNull()
+  })
+
+  it('lists the fixture run', async () => {
+    await expect(createMockReviewApi().listRuns()).resolves.toEqual([mockAppState.server.run])
+  })
+
+  it('lists the runs of the injected state', async () => {
+    const run = { ...mockAppState.server.run, run_id: 'run-x' }
+    const api = createMockReviewApi({ state: { ...mockAppState.server, run } })
+    await expect(api.listRuns()).resolves.toEqual([run])
   })
 
   it('rejects an unknown run with a 404', async () => {
@@ -92,9 +103,83 @@ describe('mock mutations', () => {
   })
 })
 
+describe('mock repositories', () => {
+  const now = () => new Date('2026-10-07T10:00:00Z')
+
+  it('lists the connected and available fixtures', async () => {
+    const api = createMockReviewApi()
+    await expect(api.listRepositories()).resolves.toEqual(mockRepositoryState.connected)
+    await expect(api.listAvailableRepositories()).resolves.toEqual(mockRepositoryState.available)
+  })
+
+  it('connects a repository and lists it as connected', async () => {
+    const api = createMockReviewApi({ now })
+    const created = await api.connectRepository({ provider: 'github', externalId: '810000003' })
+    expect(created).toEqual({
+      repository_id: 'mock-repo-1',
+      provider: 'github',
+      external_id: '810000003',
+      full_name: 'acme/docs',
+      url: 'https://github.com/acme/docs',
+      default_branch: 'main',
+      private: false,
+      connected_at: '2026-10-07T10:00:00.000Z',
+    })
+    const connected = (await api.listRepositories()) as { full_name: string }[]
+    expect(connected.map((item) => item.full_name)).toContain('acme/docs')
+    const available = (await api.listAvailableRepositories()) as {
+      external_id: string
+      repository_id: string | null
+    }[]
+    expect(available.find((item) => item.external_id === '810000003')?.repository_id).toBe(
+      'mock-repo-1',
+    )
+  })
+
+  it('rejects a repository that is already connected with a 409', async () => {
+    const api = createMockReviewApi()
+    await expect(
+      api.connectRepository({ provider: 'github', externalId: '810000001' }),
+    ).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('rejects an unknown repository with a 404', async () => {
+    const api = createMockReviewApi()
+    await expect(
+      api.connectRepository({ provider: 'gitlab', externalId: '810000003' }),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('uses the injected repositories without changing the fixtures', async () => {
+    const api = createMockReviewApi({ repositories: { connected: [], available: [] } })
+    await expect(api.listRepositories()).resolves.toEqual([])
+    await createMockReviewApi().connectRepository({ provider: 'github', externalId: '810000004' })
+    expect(mockRepositoryState.connected).toHaveLength(3)
+    expect(mockRepositoryState.available[3].repository_id).toBeNull()
+  })
+
+  it('fails while the failure switch is on and connects nothing', async () => {
+    const api = createMockReviewApi({
+      failures: ['listRepositories', 'listAvailableRepositories', 'connectRepository'],
+    })
+    await expect(api.listRepositories()).rejects.toBeInstanceOf(ApiError)
+    await expect(api.listAvailableRepositories()).rejects.toBeInstanceOf(ApiError)
+    await expect(
+      api.connectRepository({ provider: 'github', externalId: '810000003' }),
+    ).rejects.toMatchObject({ status: 500 })
+    api.setFailure('listRepositories', false)
+    await expect(api.listRepositories()).resolves.toEqual(mockRepositoryState.connected)
+  })
+})
+
 describe('failuresFromSearch', () => {
   it('keeps only known method names', () => {
     expect(failuresFromSearch('?mockFail=replyToFinding,unknown')).toEqual(['replyToFinding'])
+    expect(failuresFromSearch('?mockFail=listRuns')).toEqual(['listRuns'])
+    expect(failuresFromSearch('?mockFail=connectRepository,listRepositories')).toEqual([
+      'listRepositories',
+      'connectRepository',
+    ])
     expect(failuresFromSearch('')).toEqual([])
   })
 })

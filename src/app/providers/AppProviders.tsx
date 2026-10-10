@@ -1,20 +1,21 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { ReviewApiProvider, type ReviewApi } from '@/shared/api'
+import { AuthApiProvider, type AuthApi } from '@/shared/api'
 import { TooltipProvider } from '@/shared/ui/tooltip'
 
 interface AppProvidersProps {
-  api: ReviewApi
+  authApi: AuthApi
   queryClient: QueryClient
   children: ReactNode
 }
 
-export function AppProviders({ api, queryClient, children }: AppProvidersProps) {
+/** App-wide providers. The ReviewApi is provided inside the signed-in shell, per user. */
+export function AppProviders({ authApi, queryClient, children }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ReviewApiProvider api={api}>
+      <AuthApiProvider api={authApi}>
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-      </ReviewApiProvider>
+      </AuthApiProvider>
     </QueryClientProvider>
   )
 }

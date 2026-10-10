@@ -261,3 +261,95 @@ describe('DiffViewer: related line navigation', () => {
     expect(scrollIntoView.mock.contexts).toContain(row)
   })
 })
+
+describe('DiffViewer: suggested changes', () => {
+  const SETTINGS = 'config/settings.py'
+  const anchor = { path: SETTINGS, side: 'RIGHT' as const, line: 35 }
+
+  it('shows the suggestion under the flagged line with the original head lines', () => {
+    const findings = toFindings([
+      finding({
+        finding_id: 'f-suggest',
+        anchor,
+        suggested_change: {
+          start_line: 35,
+          end_line: 36,
+          replacement: "DEBUG = False\nALLOWED_HOSTS = ['example.com']",
+        },
+      }),
+    ])
+    renderWithProviders(<DiffViewer runId={RUN} files={fixtureFiles} findings={findings} />)
+    const { next } = rowAndNext(anchor)
+    const block = within(next as HTMLElement).getByRole('region', { name: 'Suggested change' })
+    const removed = [...block.querySelectorAll('[data-kind="del"]')].map((line) => line.textContent)
+    expect(removed).toEqual([
+      '35-Removed line: DEBUG = True',
+      "36-Removed line: ALLOWED_HOSTS = ['*']",
+    ])
+    expect(block.querySelectorAll('[data-kind="add"]')).toHaveLength(2)
+  })
+
+  it('shows no suggestion block for a finding without one', () => {
+    renderWithProviders(
+      <DiffViewer
+        runId={RUN}
+        files={fixtureFiles}
+        findings={toFindings([finding({ finding_id: 'f-plain', anchor })])}
+      />,
+    )
+    const { next } = rowAndNext(anchor)
+    expect(
+      within(next as HTMLElement).queryByRole('region', { name: 'Suggested change' }),
+    ).toBeNull()
+  })
+})
+
+describe('DiffViewer: flagged line markers', () => {
+  const SETTINGS = 'config/settings.py'
+  const line35 = { path: SETTINGS, side: 'RIGHT' as const, line: 35 }
+  const twoOnOneLine = () =>
+    toFindings([
+      finding({ finding_id: 'f-info', anchor: line35, severity: 'low' }),
+      finding({ finding_id: 'f-crit', anchor: line35, severity: 'critical' }),
+    ])
+  const markerIn = (element: HTMLElement | null) =>
+    within(element as HTMLElement).getByRole('button', { name: /findings?, / })
+
+  it('names the marker after the count and the highest group', () => {
+    renderWithProviders(<DiffViewer runId={RUN} files={fixtureFiles} findings={twoOnOneLine()} />)
+    const marker = markerIn(findLineElement(line35))
+    expect(marker).toHaveAccessibleName('2 findings, highest Critical')
+    expect(marker).toHaveAttribute('data-severity-group', 'critical')
+  })
+
+  it('selects the first finding below the line when activated', async () => {
+    renderWithProviders(<DiffViewer runId={RUN} files={fixtureFiles} findings={twoOnOneLine()} />)
+    await userEvent.click(markerIn(findLineElement(line35)))
+    expect(findingNavStore.getState().selectedFindingId).toBe('f-crit')
+  })
+
+  it('uses the resolved style when every finding on the line is resolved', () => {
+    renderFixture()
+    const marker = markerIn(findLineElement({ path: SETTINGS, side: 'RIGHT', line: 36 }))
+    expect(marker).toHaveAccessibleName('1 finding, all resolved')
+    expect(marker).toHaveAttribute('data-severity-group', 'resolved')
+  })
+
+  it('keeps the marker on the side of its findings in split mode', async () => {
+    renderWithProviders(<DiffViewer runId={RUN} files={fixtureFiles} findings={twoOnOneLine()} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'Split' }))
+    const cells = within(findLineElement(line35) as HTMLElement).getAllByRole('cell')
+    // Split columns: LEFT number, LEFT code, RIGHT number, RIGHT code.
+    expect(within(cells[2]).getByRole('button')).toHaveAccessibleName(
+      '2 findings, highest Critical',
+    )
+    expect(within(cells[0]).queryByRole('button')).toBeNull()
+  })
+
+  it('shows no marker on lines without findings', () => {
+    renderWithProviders(<DiffViewer runId={RUN} files={fixtureFiles} findings={[]} />)
+    expect(
+      within(findLineElement(line35) as HTMLElement).queryByRole('button', { name: /finding/ }),
+    ).toBeNull()
+  })
+})

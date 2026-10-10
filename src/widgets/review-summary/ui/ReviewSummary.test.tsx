@@ -20,19 +20,31 @@ beforeEach(() => {
 })
 
 describe('ReviewSummary', () => {
-  it('counts findings by severity and by resolution', () => {
+  it('counts findings by severity group and by resolution', () => {
     renderWithProviders(<ReviewSummary run={run} files={files} findings={findings} />)
     const counts = within(screen.getByRole('list', { name: 'Findings by severity' }))
       .getAllByRole('listitem')
       .map((item) => item.textContent)
-    expect(counts).toEqual(['Critical1', 'High3', 'Medium2', 'Low1'])
+    expect(counts).toEqual(['Critical1', 'Warning5', 'Info1'])
     expect(screen.getByText('6 unresolved')).toBeVisible()
     expect(screen.getByText('1 resolved')).toBeVisible()
   })
 
+  it('groups high and medium findings as Warning', () => {
+    const levels = (['critical', 'high', 'high', 'medium', 'low'] as const).map((severity, i) => ({
+      ...findings[0],
+      id: `f-${String(i)}`,
+      severity,
+    }))
+    renderWithProviders(<ReviewSummary run={run} files={files} findings={levels} />)
+    const counts = within(screen.getByRole('list', { name: 'Findings by severity' }))
+      .getAllByRole('listitem')
+      .map((item) => item.textContent)
+    expect(counts).toEqual(['Critical1', 'Warning3', 'Info1'])
+  })
+
   it('explains partial coverage and lists its limitations', () => {
     renderWithProviders(<ReviewSummary run={run} files={files} findings={findings} />)
-    expect(screen.getByText('Coverage: Partial')).toBeVisible()
     expect(screen.getByRole('note')).toHaveTextContent('Part of this change was not reviewed')
     expect(
       within(screen.getByRole('list', { name: 'Coverage limitations' })).getAllByRole('listitem'),

@@ -29,6 +29,30 @@ export interface ReviewRunWire {
   head_sha: string
   rules_version: string
   created_at: string
+  /** Proposed: the pull request author. Absent or null when the provider data is unavailable. */
+  author?: PullRequestAuthorWire | null
+  /** Proposed: target branch name of the pull request. */
+  base_branch?: string | null
+  /** Proposed: source branch name of the pull request. */
+  head_branch?: string | null
+  /** Proposed: absolute https web URL of the pull request on the provider. */
+  pull_request_url?: string | null
+}
+
+export interface PullRequestAuthorWire {
+  login: string
+  /** Absolute https URL, or null when the provider has no avatar. */
+  avatar_url: string | null
+}
+
+/**
+ * Proposed: a replacement for head-side (RIGHT) lines `start_line`..`end_line` of the
+ * finding's anchor file. An empty `replacement` suggests removing those lines.
+ */
+export interface SuggestedChangeWire {
+  start_line: number
+  end_line: number
+  replacement: string
 }
 
 export interface ReplyWire {
@@ -51,4 +75,35 @@ export interface FindingWire {
   confidence: number
   status: FindingStatusWire
   replies: ReplyWire[]
+  /** Proposed: suggested code for the anchored range; never on a LEFT anchor. */
+  suggested_change?: SuggestedChangeWire | null
+}
+
+export type VcsProviderWire = 'github' | 'gitlab'
+
+/** A repository connected to the reviewer (proposed `GET /repositories` item). */
+export interface RepositoryWire {
+  repository_id: string
+  provider: VcsProviderWire
+  /** The provider's repository ID as a string (GitHub repository ID, GitLab project ID). */
+  external_id: string
+  /** `owner/name`, or `group/subgroup/name` on GitLab. */
+  full_name: string
+  /** Absolute https web URL on the provider. */
+  url: string
+  default_branch: string
+  private: boolean
+  connected_at: string
+}
+
+/** A repository the user can access (proposed `GET /repositories/available` item). */
+export interface AvailableRepositoryWire {
+  provider: VcsProviderWire
+  external_id: string
+  full_name: string
+  url: string
+  default_branch: string
+  private: boolean
+  /** Set when this repository is already connected. */
+  repository_id: string | null
 }

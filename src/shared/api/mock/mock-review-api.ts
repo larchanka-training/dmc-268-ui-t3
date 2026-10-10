@@ -1,12 +1,15 @@
 import { ApiError, type ReviewApi, type ReviewApiMethod } from '../review-api'
-import type { FindingWire, ReplyWire } from '../types'
+import type { FindingWire, ReplyWire, RepositoryWire } from '../types'
 import { mockAppState, type MockAppState } from './app-state.mock'
+import { mockRepositoryState, type MockRepositoryState } from './repositories.mock'
 
 type MockServerState = MockAppState['server']
 
 export interface MockReviewApiOptions {
   /** Initial server state; defaults to a copy of mockAppState.server. */
   state?: MockServerState
+  /** Initial repositories; defaults to a copy of mockRepositoryState. */
+  repositories?: MockRepositoryState
   /** Artificial latency per call, in milliseconds. */
   delayMs?: number
   /** Methods that reject with a 500 error until switched off. */
@@ -46,11 +49,13 @@ function clone<T>(value: T): T {
 /** In-memory ReviewApi backed by the mock application state. */
 export function createMockReviewApi(options: MockReviewApiOptions = {}): MockReviewApi {
   const state = clone(options.state ?? mockAppState.server)
+  const repositories = clone(options.repositories ?? mockRepositoryState)
   const failing = new Set<ReviewApiMethod>(options.failures)
   const delayMs = options.delayMs ?? 0
   const author = options.author ?? 'you'
   const now = options.now ?? (() => new Date())
   let replyCounter = 0
+  let repositoryCounter = 0
 
   async function respond<T>(
     method: ReviewApiMethod,
@@ -84,6 +89,8 @@ export function createMockReviewApi(options: MockReviewApiOptions = {}): MockRev
       if (isFailing) failing.add(method)
       else failing.delete(method)
     },
+    // The mock state holds one run; the list is derived from it so the state shape stays as documented.
+    listRuns: (signal) => respond('listRuns', signal, () => [state.run]),
     getRun: (runId, signal) =>
       respond('getRun', signal, () => {
         requireRun(runId)
@@ -123,20 +130,53 @@ export function createMockReviewApi(options: MockReviewApiOptions = {}): MockRev
         finding.status = status
         return finding
       }),
+    listRepositories: (signal) => respond('listRepositories', signal, () => repositories.connected),
+    listAvailableRepositories: (signal) =>
+      respond('listAvailableRepositories', signal, () => repositories.available),
+    connectRepository: ({ provider, externalId }, signal) =>
+      respond('connectRepository', signal, () => {
+        const available = repositories.available.find(
+          (item) => item.provider === provider && item.external_id === externalId,
+        )
+        if (!available) {
+          throw new ApiError(`Repository ${provider}:${externalId} not found`, 404)
+        }
+        if (available.repository_id !== null) {
+          throw new ApiError(`Repository ${available.full_name} is already connected`, 409)
+        }
+        repositoryCounter += 1
+        const repository: RepositoryWire = {
+          repository_id: `mock-repo-${String(repositoryCounter)}`,
+          provider: available.provider,
+          external_id: available.external_id,
+          full_name: available.full_name,
+          url: available.url,
+          default_branch: available.default_branch,
+          private: available.private,
+          connected_at: now().toISOString(),
+        }
+        available.repository_id = repository.repository_id
+        repositories.connected.push(repository)
+        return repository
+      }),
   }
 }
 
 /**
- * Reads the dev-only failure switch from the URL, e.g. `?mockFail=replyToFinding,setFindingStatus`.
+ * Reads the dev-only failure switch from the URL, e.g. `?mockFail=replyToFinding,connectRepository`.
  */
 export function failuresFromSearch(search: string): ReviewApiMethod[] {
   const methods: ReviewApiMethod[] = [
+    'listRuns',
     'getRun',
     'getDiff',
     'getFindings',
     'getFileContent',
     'replyToFinding',
     'setFindingStatus',
+    'listRepositories',
+    'listAvailableRepositories',
+    'connectRepository',
   ]
   const requested = new URLSearchParams(search).get('mockFail')?.split(',') ?? []
   return methods.filter((method) => requested.includes(method))
